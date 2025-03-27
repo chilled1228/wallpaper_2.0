@@ -1,4 +1,13 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wallpaper 2.0
+
+## Recent Updates
+
+### UI Redesign
+- Completely redesigned the wallpaper view page with a modern, immersive interface
+- Redesigned the home page with a hero section, featured categories, and an improved wallpaper grid
+- Added filtering by category and improved search functionality
+- Enhanced card designs with hover effects and better visual presentation
+- Improved mobile responsiveness across the application
 
 ## Getting Started
 
@@ -19,6 +28,22 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Features
+- Browse and search wallpapers
+- Filter by category
+- Download in different resolutions
+- View detailed wallpaper information
+- Like and save favorites
+- Share wallpapers
+- Responsive design for all devices
+
+## Technologies
+- Next.js App Router
+- TypeScript
+- Shadcn UI
+- Tailwind CSS
+- Firebase
 
 ## Learn More
 
