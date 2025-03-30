@@ -1,29 +1,29 @@
 import { Metadata } from 'next'
 
 export const defaultMetadata: Metadata = {
-  title: 'Free AI Prompts - High Quality Prompts for Your Projects',
-  description: 'Discover and use high-quality AI prompts for your projects. Free collection of prompts for various AI models and use cases.',
-  keywords: ['AI prompts', 'free prompts', 'prompt engineering', 'AI tools', 'prompt templates'],
+  title: 'Free Wallpapers - High Quality Wallpapers for Your Devices',
+  description: 'Discover and use high-quality wallpapers for your devices. Free collection of wallpapers for various screen sizes and use cases.',
+  keywords: ['wallpapers', 'free wallpapers', 'HD wallpapers', 'device wallpapers', 'wallpaper collection'],
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://freepromptbase.com',
-    siteName: 'Free AI Prompts',
-    title: 'Free AI Prompts - High Quality Prompts for Your Projects',
-    description: 'Discover and use high-quality AI prompts for your projects. Free collection of prompts for various AI models and use cases.',
+    url: 'https://freewallpapers.com',
+    siteName: 'Free Wallpapers',
+    title: 'Free Wallpapers - High Quality Wallpapers for Your Devices',
+    description: 'Discover and use high-quality wallpapers for your devices. Free collection of wallpapers for various screen sizes and use cases.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Free AI Prompts',
+        alt: 'Free Wallpapers',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free AI Prompts - High Quality Prompts for Your Projects',
-    description: 'Discover and use high-quality AI prompts for your projects. Free collection of prompts for various AI models and use cases.',
+    title: 'Free Wallpapers - High Quality Wallpapers for Your Devices',
+    description: 'Discover and use high-quality wallpapers for your devices. Free collection of wallpapers for various screen sizes and use cases.',
     images: ['/og-image.png'],
   },
   robots: {

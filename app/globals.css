@@ -37,6 +37,51 @@
     @apply transition-all duration-200 ease-in-out transform;
   }
 
+  /* Enhanced Responsive Utilities */
+  .responsive-container {
+    @apply w-full px-4 sm:px-6 md:px-8 mx-auto;
+  }
+
+  .responsive-padding {
+    @apply py-4 sm:py-6 md:py-8 lg:py-12;
+  }
+
+  .responsive-margin {
+    @apply my-4 sm:my-6 md:my-8 lg:my-12;
+  }
+
+  .responsive-gap {
+    @apply gap-3 sm:gap-4 md:gap-6 lg:gap-8;
+  }
+
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8;
+  }
+  
+  .responsive-flex {
+    @apply flex flex-col sm:flex-row items-start sm:items-center;
+  }
+
+  .responsive-text-small {
+    @apply text-xs sm:text-sm md:text-base;
+  }
+
+  .responsive-text-medium {
+    @apply text-sm sm:text-base md:text-lg lg:text-xl;
+  }
+
+  .responsive-text-large {
+    @apply text-base sm:text-lg md:text-xl lg:text-2xl;
+  }
+
+  .responsive-text-xlarge {
+    @apply text-lg sm:text-xl md:text-2xl lg:text-3xl;
+  }
+
+  .responsive-text-heading {
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold;
+  }
+
   .scrollbar-stable {
     scrollbar-gutter: stable;
   }
@@ -88,14 +133,20 @@
     );
     animation: shimmer 1.5s infinite linear;
   }
-
-  .dark .shimmer::before {
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.03) 50%,
-      transparent 100%
-    );
+  
+  /* Touch-friendly interactive elements */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Safe-area utilities for notched devices */
+  .safe-padding-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  
+  /* Responsive image container */
+  .responsive-image-container {
+    @apply relative w-full aspect-video sm:aspect-[4/3] md:aspect-[16/9];
   }
 }
 

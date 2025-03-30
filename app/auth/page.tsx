@@ -1,29 +1,30 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/app/providers';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '@/lib/firebase';
 import { AuthButtons } from '@/components/auth/auth-buttons';
 
 export default function AuthPage() {
-  const { user, loading } = useAuth();
+  const [user, loading] = useAuthState(auth);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (user && !loading) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const redirectUrl = urlParams.get('redirect') || '/';
+      const redirectUrl = searchParams.get('redirect') || '/';
       router.push(redirectUrl);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, searchParams]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="max-w-md w-full p-8 space-y-4">
+      <div className="max-w-md w-full p-8 space-y-4 bg-background/60 backdrop-blur-xl rounded-xl border border-primary/10 shadow-sm">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">Welcome to PromptBase</h1>
+          <h1 className="text-2xl font-bold">Welcome to FreeWallpapers</h1>
           <p className="text-muted-foreground">
-            Sign in to access your prompts and history
+            Sign in to save and upload your favorite wallpapers
           </p>
         </div>
         

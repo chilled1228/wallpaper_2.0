@@ -1,8 +1,10 @@
-import { useAuth } from '@/app/providers';
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { useAuthState } from 'react-firebase-hooks/auth';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,12 +13,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User2, LogOut } from 'lucide-react';
-import { LoginDialog } from './login-dialog';
+import { User2, LogOut, Upload } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect } from 'react';
 
 export function LoginButton() {
-  const { user, loading } = useAuth();
+  const [user, loading] = useAuthState(auth);
   const router = useRouter();
 
   useEffect(() => {
@@ -49,13 +51,17 @@ export function LoginButton() {
   if (loading) {
     return (
       <Button variant="ghost" size="sm" disabled>
-        Loading...
+        <span className="h-4 w-4 animate-pulse rounded-full bg-primary/20"></span>
       </Button>
     );
   }
 
   if (!user) {
-    return <LoginDialog />;
+    return (
+      <Button asChild size="sm" variant="default">
+        <Link href="/auth">Sign In</Link>
+      </Button>
+    );
   }
 
   return (
@@ -82,11 +88,19 @@ export function LoginButton() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer"
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push('/profile')}
         >
           <User2 className="mr-2 h-4 w-4" />
-          Dashboard
+          My Profile
         </DropdownMenuItem>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => router.push('/upload')}
+        >
+          <Upload className="mr-2 h-4 w-4" />
+          Upload Wallpaper
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-red-600 cursor-pointer"
           onClick={handleSignOut}

@@ -2,46 +2,100 @@ import { MetadataRoute } from 'next'
 import { db } from '@/lib/firebase-admin'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Get all prompts and blog posts
-  const [promptsSnapshot, blogsSnapshot] = await Promise.all([
-    db.collection('prompts').get(),
-    db.collection('blogs').get()
-  ])
+  // Get all wallpapers, categories, and blog posts
+  const [wallpapersSnapshot, blogsSnapshot, categoriesSnapshot] = await Promise.all([
+    db.collection('wallpapers').get(),
+    db.collection('blogs').get(),
+    db.collection('categories').get()
+  ]).catch(error => {
+    console.error('Error fetching data for sitemap:', error);
+    return [{ docs: [] }, { docs: [] }, { docs: [] }];
+  });
   
   // Base URL from environment variable or default
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://freepromptbase.com'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://freewallpapers.com'
 
   // Static routes
   const routes: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: new Date(),
-      changeFrequency: 'daily' as const,
+      changeFrequency: 'daily',
       priority: 1,
     },
     {
-      url: `${baseUrl}/auth`,
+      url: `${baseUrl}/featured`,
       lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/categories`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
       priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/contact`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.6,
     },
   ]
 
-  // Dynamic prompt routes
-  const promptRoutes = promptsSnapshot.docs.map((doc) => ({
-    url: `${baseUrl}/prompts/${doc.id}`,
-    lastModified: new Date(doc.data().createdAt),
-    changeFrequency: 'daily' as const,
-    priority: 0.9,
-  }))
+  // Dynamic wallpaper routes
+  const wallpaperRoutes = wallpapersSnapshot.docs.map((doc) => {
+    const data = doc.data();
+    const slug = data.slug || doc.id;
+    return {
+      url: `${baseUrl}/wallpapers/${slug}`,
+      lastModified: data.updatedAt ? new Date(data.updatedAt) : new Date(data.createdAt || Date.now()),
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    };
+  });
+
+  // Dynamic category routes
+  const categoryRoutes = categoriesSnapshot.docs.map((doc) => {
+    const data = doc.data();
+    const slug = data.slug || doc.id;
+    return {
+      url: `${baseUrl}/categories/${slug}`,
+      lastModified: data.updatedAt ? new Date(data.updatedAt) : new Date(data.createdAt || Date.now()),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    };
+  });
 
   // Dynamic blog routes
-  const blogRoutes = blogsSnapshot.docs.map((doc) => ({
-    url: `${baseUrl}/blog/${doc.id}`,
-    lastModified: new Date(doc.data().createdAt),
-    changeFrequency: 'daily' as const,
-    priority: 0.9,
-  }))
+  const blogRoutes = blogsSnapshot.docs.map((doc) => {
+    const data = doc.data();
+    const slug = data.slug || doc.id;
+    return {
+      url: `${baseUrl}/blog/${slug}`,
+      lastModified: data.updatedAt ? new Date(data.updatedAt) : new Date(data.createdAt || Date.now()),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    };
+  });
 
-  return [...routes, ...promptRoutes, ...blogRoutes]
+  return [...routes, ...wallpaperRoutes, ...categoryRoutes, ...blogRoutes]
 } 

@@ -26,6 +26,13 @@ service cloud.firestore {
       }
     }
 
+    // Wallpapers collection - allow reading featured/public wallpapers
+    match /wallpapers/{wallpaper} {
+      allow read: if resource.data.isPublic == true && resource.data.status == 'active';
+      allow list: if true; // For listing wallpapers on homepage
+      allow write: if isAdmin();
+    }
+
     // Prompts collection - public read access
     match /prompts/{prompt} {
       allow read, list: if true;  // Anyone can read and list prompts

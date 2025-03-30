@@ -92,10 +92,10 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const promptsSnapshot = await getDocs(collection(db, 'prompts'));
+      const promptsSnapshot = await getDocs(collection(db, 'wallpapers'));
       const totalPrompts = promptsSnapshot.size;
 
-      const freePromptsQuery = query(collection(db, 'prompts'), where('price', '==', 0));
+      const freePromptsQuery = query(collection(db, 'wallpapers'), where('price', '==', 0));
       const freePromptsSnapshot = await getDocs(freePromptsQuery);
       const freePrompts = freePromptsSnapshot.size;
 
@@ -103,7 +103,7 @@ export default function AdminDashboard() {
       const totalUsers = usersSnapshot.size;
 
       const recentPromptsQuery = query(
-        collection(db, 'prompts'),
+        collection(db, 'wallpapers'),
         orderBy('createdAt', 'desc'),
         limit(5)
       );

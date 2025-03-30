@@ -6,15 +6,86 @@ import { WallpaperGrid } from '@/components/wallpaper-grid'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import NextImage from 'next/image'
+import { db } from '@/lib/firebase'
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore'
 
 // Generate metadata for SEO
 export const metadata: Metadata = defaultMetadata
 
+async function getFeaturedWallpaper() {
+  console.log('Starting to fetch featured wallpaper');
+  try {
+    // Query for featured wallpapers that are public and active
+    const featuredQuery = query(
+      collection(db, 'wallpapers'),
+      where('featured', '==', true),
+      where('isPublic', '==', true),
+      where('status', '==', 'active'),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+    
+    console.log('Executing featured wallpapers query...');
+    const snapshot = await getDocs(featuredQuery);
+    console.log(`Query returned ${snapshot.size} featured wallpapers`);
+
+    // Get all featured wallpapers (for debugging)
+    const allFeaturedQuery = query(
+      collection(db, 'wallpapers'),
+      where('featured', '==', true)
+    );
+    const allFeaturedSnapshot = await getDocs(allFeaturedQuery);
+    console.log(`Total featured wallpapers (regardless of status): ${allFeaturedSnapshot.size}`);
+    
+    if (allFeaturedSnapshot.size > 0) {
+      console.log('All featured wallpapers:');
+      allFeaturedSnapshot.forEach(doc => {
+        const data = doc.data();
+        console.log(`- ID: ${doc.id}, Title: ${data.title}, Public: ${data.isPublic}, Status: ${data.status}`);
+      });
+    }
+    
+    if (snapshot.empty) {
+      console.log('No active, public featured wallpapers found, using default');
+      // Return default if no featured wallpaper found
+      return {
+        id: 'default',
+        title: 'Featured Wallpaper of the Week',
+        imageUrl: '/featured-wallpaper.jpg',
+        slug: ''
+      };
+    }
+    
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    console.log('Found featured wallpaper to display:', doc.id, data);
+    
+    return {
+      id: doc.id,
+      ...data,
+      title: data.title || 'Featured Wallpaper',
+      imageUrl: data.imageUrl || '/featured-wallpaper.jpg',
+      slug: data.slug || doc.id
+    };
+  } catch (error) {
+    console.error('Error fetching featured wallpaper:', error);
+    // Return default on error
+    return {
+      id: 'default',
+      title: 'Featured Wallpaper of the Week',
+      imageUrl: '/featured-wallpaper.jpg',
+      slug: ''
+    };
+  }
+}
+
 export default async function HomePage() {
+  const featuredWallpaper = await getFeaturedWallpaper();
+  
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="relative w-full overflow-hidden bg-gradient-to-b from-background to-background/80 mb-16">
+      <section className="relative w-full overflow-hidden bg-gradient-to-b from-background to-background/80 mb-8 sm:mb-12 md:mb-16">
         <div className="absolute inset-0 opacity-10 blur-3xl pointer-events-none bg-gradient-to-r from-primary to-secondary"></div>
         
         <div className="container mx-auto px-4 py-12 md:py-20 max-w-7xl">
@@ -51,8 +122,8 @@ export default async function HomePage() {
             <div className="lg:col-span-6 hidden md:block">
               <div className="relative aspect-[16/9] rounded-xl overflow-hidden shadow-2xl shadow-primary/10 border border-primary/10 transform rotate-1 hover:rotate-0 transition-all duration-700">
                 <NextImage
-                  src="/featured-wallpaper.jpg"
-                  alt="Featured Wallpaper"
+                  src={featuredWallpaper.imageUrl}
+                  alt={featuredWallpaper.title}
                   fill={true}
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 50vw"
@@ -61,8 +132,41 @@ export default async function HomePage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70"></div>
                 <div className="absolute bottom-4 left-4 right-4">
                   <span className="px-3 py-1 bg-primary/90 text-primary-foreground text-xs font-medium rounded-full">Featured</span>
-                  <h3 className="text-white font-medium mt-2 line-clamp-1">Featured Wallpaper of the Week</h3>
+                  <h3 className="text-white font-medium mt-2 line-clamp-1">{featuredWallpaper.title}</h3>
                 </div>
+                {featuredWallpaper.id !== 'default' && (
+                  <Link 
+                    href={`/wallpapers/${featuredWallpaper.slug}`} 
+                    className="absolute inset-0 z-10"
+                    aria-label={`View ${featuredWallpaper.title}`} 
+                  />
+                )}
+              </div>
+            </div>
+            
+            {/* Mobile Featured Image */}
+            <div className="lg:hidden col-span-1 -mx-4 sm:mx-0 sm:mt-4">
+              <div className="relative aspect-[16/9] sm:rounded-xl overflow-hidden shadow-lg shadow-primary/10 border-y sm:border border-primary/10">
+                <NextImage
+                  src={featuredWallpaper.imageUrl}
+                  alt={featuredWallpaper.title}
+                  fill={true}
+                  className="object-cover"
+                  sizes="100vw"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70"></div>
+                <div className="absolute bottom-3 left-3 right-3">
+                  <span className="px-2 py-0.5 bg-primary/90 text-primary-foreground text-xs font-medium rounded-full">Featured</span>
+                  <h3 className="text-white text-sm font-medium mt-1 line-clamp-1">{featuredWallpaper.title}</h3>
+                </div>
+                {featuredWallpaper.id !== 'default' && (
+                  <Link 
+                    href={`/wallpapers/${featuredWallpaper.slug}`} 
+                    className="absolute inset-0 z-10"
+                    aria-label={`View ${featuredWallpaper.title}`} 
+                  />
+                )}
               </div>
             </div>
           </div>

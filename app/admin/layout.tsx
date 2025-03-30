@@ -25,8 +25,8 @@ const navigation = [
     icon: LayoutDashboard
   },
   {
-    name: 'Prompts',
-    href: '/admin/prompts',
+    name: 'Wallpapers',
+    href: '/admin/wallpapers',
     icon: ListPlus
   },
   {

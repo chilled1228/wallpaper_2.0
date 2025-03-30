@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { 
@@ -37,7 +39,7 @@ export function AuthButtons() {
     router.push(redirectUrl);
   };
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
+  const handleEmailAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
@@ -110,16 +112,15 @@ export function AuthButtons() {
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.form
+        <motion.div
           key={isSignUp ? 'signup' : 'signin'}
           initial={{ opacity: 0, x: isSignUp ? 20 : -20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: isSignUp ? -20 : 20 }}
           transition={{ duration: 0.2 }}
-          onSubmit={handleEmailAuth}
           className="space-y-4"
         >
-          <div className="space-y-3">
+          <form onSubmit={handleEmailAuth} className="space-y-3">
             <Input
               type="email"
               placeholder="Email"
@@ -136,32 +137,32 @@ export function AuthButtons() {
               className="h-11"
               required
             />
-          </div>
-          
-          {error && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-sm text-red-500 mt-2"
-            >
-              {error}
-            </motion.p>
-          )}
-
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full h-11 font-medium"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <span className="flex items-center gap-2">
-                <MdEmail className="w-5 h-5" />
-                {isSignUp ? 'Create Account' : 'Sign In'}
-              </span>
+            
+            {error && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-sm text-red-500 mt-2"
+              >
+                {error}
+              </motion.p>
             )}
-          </Button>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 font-medium"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <span className="flex items-center gap-2">
+                  <MdEmail className="w-5 h-5" />
+                  {isSignUp ? 'Create Account' : 'Sign In'}
+                </span>
+              )}
+            </Button>
+          </form>
 
           <p className="text-center text-sm">
             {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
@@ -173,7 +174,7 @@ export function AuthButtons() {
               {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>
           </p>
-        </motion.form>
+        </motion.div>
       </AnimatePresence>
     </div>
   );

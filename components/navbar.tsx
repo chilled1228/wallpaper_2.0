@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { LoginButton } from './auth/login-button';
 import { Button } from './ui/button';
-import { ChevronDown, Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X, Image as ImageIcon } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,14 +11,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ModeToggle } from './mode-toggle';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { CreditsDisplay } from './credits-display';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
+import NextImage from 'next/image';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [user] = useAuthState(auth);
+
+  const closeSheet = useCallback(() => {
+    setIsOpen(false);
+  }, []);
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b glass-effect">
@@ -27,10 +33,12 @@ export function Navbar() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-1.5 sm:gap-2 transition-opacity hover:opacity-90">
-              <svg viewBox="0 0 24 24" className="h-5 w-5 sm:h-6 sm:w-6 text-primary" fill="currentColor">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-              </svg>
-              <span key="navbar-logo" className="font-heading text-lg sm:text-xl font-bold">FreePromptBase</span>
+              <div className="relative w-6 h-6 sm:w-7 sm:h-7">
+                <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              </div>
+              <span key="navbar-logo" className="font-heading text-lg sm:text-xl font-bold">
+                FreeWallpapers
+              </span>
             </Link>
           </div>
 
@@ -43,10 +51,16 @@ export function Navbar() {
               Home
             </Link>
             <Link 
-              href="/inspiration"
+              href="/categories"
               className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Inspiration
+              Categories
+            </Link>
+            <Link 
+              href="/featured"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Featured
             </Link>
             <Link 
               href="/blog"
@@ -54,43 +68,19 @@ export function Navbar() {
             >
               Blog
             </Link>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Tools
-                  <ChevronDown className="ml-1 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="w-48 animate-in fade-in">
-                <DropdownMenuItem className="cursor-pointer">
-                  <Link href="/image-to-prompt" className="flex w-full">Image to Prompt</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">
-                  <Link href="/text-humanizer" className="flex w-full">Text Humanizer</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">
-                  <Link href="/backstory" className="flex w-full">Backstory Generator</Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Link 
-              href="/pricing"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Pricing
-            </Link>
           </div>
 
           {/* Right Side */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <ModeToggle />
             <div className="hidden md:flex items-center gap-2">
-              <CreditsDisplay />
+              {user && <CreditsDisplay />}
               <LoginButton />
+              {user && (
+                <Button variant="outline" size="sm" className="hidden lg:flex">
+                  Upload Wallpaper
+                </Button>
+              )}
             </div>
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild className="md:hidden">
@@ -104,64 +94,39 @@ export function Navbar() {
                   <Link 
                     href="/"
                     className="text-base sm:text-lg font-medium text-foreground/80 hover:text-foreground transition-colors"
-                    onClick={() => setIsOpen(false)}
+                    onClick={closeSheet}
                   >
                     Home
                   </Link>
                   <Link 
-                    href="/inspiration"
+                    href="/categories"
                     className="text-base sm:text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setIsOpen(false)}
+                    onClick={closeSheet}
                   >
-                    Inspiration
+                    Categories
+                  </Link>
+                  <Link 
+                    href="/featured"
+                    className="text-base sm:text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={closeSheet}
+                  >
+                    Featured
                   </Link>
                   <Link 
                     href="/blog"
                     className="text-base sm:text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setIsOpen(false)}
+                    onClick={closeSheet}
                   >
                     Blog
                   </Link>
-                  <Link 
-                    href="/tools"
-                    className="text-base sm:text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Tools
-                  </Link>
-                  <div className="pl-4 space-y-2">
-                    <Link
-                      href="/image-to-prompt"
-                      className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Image to Prompt
-                    </Link>
-                    <Link
-                      href="/text-humanizer"
-                      className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Text Humanizer
-                    </Link>
-                    <Link
-                      href="/backstory"
-                      className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Backstory Generator
-                    </Link>
-                  </div>
-                  <Link 
-                    href="/pricing"
-                    className="text-base sm:text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Pricing
-                  </Link>
-                  <div className="pt-4 flex flex-col gap-2">
-                    <CreditsDisplay />
+                  <div className="pt-4 flex flex-col gap-3">
+                    {user && <CreditsDisplay />}
                     <LoginButton />
+                    {user && (
+                      <Button variant="default" className="w-full" onClick={closeSheet}>
+                        Upload Wallpaper
+                      </Button>
+                    )}
                   </div>
                 </div>
               </SheetContent>

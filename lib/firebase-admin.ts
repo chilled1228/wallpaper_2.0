@@ -15,8 +15,15 @@ const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 const privateKeyBase = process.env.FIREBASE_PRIVATE_KEY;
 
 if (!projectId || !clientEmail || !privateKeyBase) {
+  console.error('Missing Firebase Admin env vars:', {
+    hasProjectId: !!projectId,
+    hasClientEmail: !!clientEmail,
+    hasPrivateKey: !!privateKeyBase
+  });
   throw new Error('Missing required Firebase Admin environment variables');
 }
+
+console.log('Firebase Admin initializing with project ID:', projectId);
 
 // Format private key
 const privateKey = privateKeyBase.includes('\\n')
@@ -26,7 +33,9 @@ const privateKey = privateKeyBase.includes('\\n')
 // Initialize Firebase Admin
 const getFirebaseApp = () => {
   if (getApps().length > 0) {
-    return getApp();
+    const app = getApp();
+    console.log('Reusing existing Firebase Admin app');
+    return app;
   }
 
   const config = {
@@ -38,11 +47,7 @@ const getFirebaseApp = () => {
     databaseURL: `https://${projectId}.firebaseio.com`
   };
     
-  console.log('Initializing Firebase Admin with config:', {
-    projectId,
-    clientEmail,
-    databaseURL: config.databaseURL,
-  });
+  console.log('Initializing Firebase Admin with project:', projectId);
     
   return initializeApp(config);
 };
@@ -52,7 +57,7 @@ let db: Firestore;
 try {
   const app = getFirebaseApp();
   db = getFirestore(app);
-  console.log('Firestore initialized successfully');
+  console.log('Firebase Admin Firestore initialized successfully for project:', projectId);
 } catch (error) {
   console.error('Error initializing Firebase Admin:', error);
   throw error;
