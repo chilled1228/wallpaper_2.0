@@ -269,8 +269,7 @@ export function WallpaperGrid() {
                           </div>
                           <div className="h-3 w-px bg-white/30" />
                           <div className="flex items-center">
-                            <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5" />
-                            <span>Download</span>
+                            <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                           </div>
                         </div>
                       </div>

@@ -64,7 +64,6 @@ export default function WallpaperPage() {
   const [isSaved, setIsSaved] = useState(false)
   const [previewMode, setPreviewMode] = useState<'light' | 'dark'>('dark')
   const [dominantColor, setDominantColor] = useState('rgba(0,0,0,0.9)')
-  const [userResolution, setUserResolution] = useState<string | null>(null)
 
   // Handle view count
   useEffect(() => {
@@ -99,25 +98,6 @@ export default function WallpaperPage() {
     }
   }, []); // Empty dependency array to run only once on mount
 
-  // Get user's screen resolution
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const width = window.screen.width
-      const height = window.screen.height
-      if (width >= 3840) {
-        setUserResolution('4K')
-      } else if (width >= 2560 && width/height > 1.7) {
-        setUserResolution('UltraWide')
-      } else if (width >= 1920) {
-        setUserResolution('HD')
-      } else if (width <= 1080) {
-        setUserResolution('Mobile')
-      } else {
-        setUserResolution('HD')
-      }
-    }
-  }, [])
-
   useEffect(() => {
     const checkAdminStatus = async () => {
       const user = auth.currentUser
@@ -134,32 +114,92 @@ export default function WallpaperPage() {
     const fetchWallpaper = async () => {
       try {
         setLoading(true)
-        // First try to find by slug
-        const slugQuery = query(
-          collection(db, 'wallpapers'),
-          where('slug', '==', params.id),
-          where('isPublic', '==', true)
-        )
-        const slugSnapshot = await getDocs(slugQuery)
+        console.log('[DEBUG] Fetching wallpaper with ID/slug:', params.id);
         
-        if (!slugSnapshot.empty) {
-          const doc = slugSnapshot.docs[0]
-          setWallpaper({ id: doc.id, ...doc.data() } as Wallpaper)
-          return
-        }
-
-        // If not found by slug, try to find by ID (for backward compatibility)
-        const docRef = doc(db, 'wallpapers', params.id as string)
-        const docSnap = await getDoc(docRef)
-
-        if (docSnap.exists()) {
-          setWallpaper({ id: docSnap.id, ...docSnap.data() } as Wallpaper)
+        // Special workaround for bulk-uploaded wallpapers
+        if (auth.currentUser) {
+          // Authenticated users should be able to fetch directly
+          const docRef = doc(db, 'wallpapers', params.id as string)
+          const docSnap = await getDoc(docRef)
+  
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            console.log('[DEBUG] Found wallpaper by ID with auth:', { 
+              id: docSnap.id, 
+              isPublic: data.isPublic, 
+              status: data.status 
+            });
+            setWallpaper({ id: docSnap.id, ...data } as Wallpaper)
+            return
+          }
         } else {
-          setError('Wallpaper not found')
+          // Try using a server endpoint to bypass Firestore rules for non-authenticated users
+          try {
+            const response = await fetch(`/api/public/wallpapers/${params.id}`)
+            
+            if (response.ok) {
+              const data = await response.json()
+              if (data.wallpaper) {
+                console.log('[DEBUG] Found wallpaper via API:', data.wallpaper)
+                setWallpaper(data.wallpaper as Wallpaper)
+                return
+              }
+            } else {
+              console.log('[DEBUG] API fetch failed:', await response.text())
+            }
+          } catch (apiError) {
+            console.error('Error using API fallback:', apiError)
+          }
+          
+          // Fallback to direct Firestore query (may fail due to permissions)
+          const docRef = doc(db, 'wallpapers', params.id as string)
+          try {
+            const docSnap = await getDoc(docRef)
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              console.log('[DEBUG] Found wallpaper by direct ID without auth:', { 
+                id: docSnap.id, 
+                isPublic: data.isPublic, 
+                status: data.status 
+              });
+              setWallpaper({ id: docSnap.id, ...data } as Wallpaper)
+              return
+            }
+          } catch (firestoreError) {
+            console.error('Firestore direct access error:', firestoreError)
+          }
         }
+        
+        // If not found by ID, try to find by slug
+        console.log('[DEBUG] Not found by ID, trying slug lookup');
+        try {
+          const slugQuery = query(
+            collection(db, 'wallpapers'),
+            where('slug', '==', params.id)
+          )
+          const slugSnapshot = await getDocs(slugQuery)
+          
+          if (!slugSnapshot.empty) {
+            const doc = slugSnapshot.docs[0];
+            const data = doc.data();
+            console.log('[DEBUG] Found wallpaper by slug:', { 
+              id: doc.id, 
+              isPublic: data.isPublic, 
+              status: data.status 
+            });
+            setWallpaper({ id: doc.id, ...data } as Wallpaper)
+            return
+          }
+        } catch (slugError) {
+          console.error('Error in slug query:', slugError)
+        }
+
+        // If we get here, the wallpaper wasn't found or couldn't be accessed
+        console.log('[DEBUG] Wallpaper not found or permission denied');
+        setError('Wallpaper not found or inaccessible')
       } catch (error) {
         console.error('Error fetching wallpaper:', error)
-        setError('Failed to load wallpaper')
+        setError('Failed to load wallpaper: ' + (error instanceof Error ? error.message : String(error)))
       } finally {
         setLoading(false)
       }
@@ -192,7 +232,13 @@ export default function WallpaperPage() {
         const suggestedSnapshot = await getDocs(suggestedQuery)
         const allSuggestedWallpapers = suggestedSnapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() } as Wallpaper))
-          .filter(suggestedWallpaper => suggestedWallpaper.slug !== wallpaper.slug)
+          .filter(suggestedWallpaper => {
+            // Filter out the current wallpaper
+            if (wallpaper.slug && suggestedWallpaper.slug) {
+              return suggestedWallpaper.slug !== wallpaper.slug;
+            }
+            return suggestedWallpaper.id !== wallpaper.id;
+          })
           .slice(0, 4)
         
         setSuggestedWallpapers(allSuggestedWallpapers)
@@ -232,22 +278,25 @@ export default function WallpaperPage() {
     }
   }
 
-  const handleDownloadWallpaper = () => {
-    if (!wallpaper?.imageUrl) return
+  const handleDownload = (resolution?: string) => {
+    if (!wallpaper?.imageUrl) return;
+    
+    // Just use the original image URL for all downloads
+    const imageUrl = wallpaper.imageUrl;
     
     // Create an anchor element and set download attribute
-    const a = document.createElement('a')
-    a.href = wallpaper.imageUrl
-    a.download = `${wallpaper.title.replace(/\s+/g, '-')}.jpg`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    const a = document.createElement('a');
+    a.href = imageUrl;
+    a.download = `${wallpaper.title.replace(/\s+/g, '-')}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     
     toast({
-      title: "Downloaded!",
+      title: "Download Started",
       description: "Wallpaper downloaded successfully",
-    })
-  }
+    });
+  };
 
   const handleAddImages = (urls: string[]) => {
     if (!urls.length) return
@@ -308,27 +357,6 @@ export default function WallpaperPage() {
     }
   }, [wallpaper])
 
-  const handleDownload = (resolution?: string) => {
-    if (!wallpaper?.imageUrl) return;
-    
-    // In a real app, you might have different resolution URLs
-    // For this example, we'll just use the original URL
-    const imageUrl = wallpaper.imageUrl;
-    
-    // Create an anchor element and set download attribute
-    const a = document.createElement('a');
-    a.href = imageUrl;
-    a.download = `${wallpaper.title.replace(/\s+/g, '-')}_${resolution || 'original'}.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    toast({
-      title: "Download Started",
-      description: `${resolution || 'Original'} resolution downloaded`,
-    });
-  };
-
   // Handling the rendering section of the component
   const getCurrentImage = () => {
     if (!wallpaper) return '';
@@ -359,10 +387,20 @@ export default function WallpaperPage() {
         <div className="max-w-md mx-auto p-6 bg-background/40 backdrop-blur-sm border border-primary/10 rounded-xl">
           <Info className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h1 className="text-xl font-semibold mb-2">Wallpaper Not Found</h1>
-          <p className="text-muted-foreground mb-6">The wallpaper you're looking for doesn't exist or has been removed.</p>
-          <Button asChild>
-            <Link href="/">Go Back Home</Link>
-          </Button>
+          <p className="text-muted-foreground mb-6">
+            The wallpaper you're looking for doesn't exist or has been removed.
+            {error && error !== 'Wallpaper not found' && (
+              <span className="block mt-2 text-sm">Error: {error}</span>
+            )}
+          </p>
+          <div className="flex flex-col gap-4">
+            <Button asChild>
+              <Link href="/">Go Back Home</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/wallpapers">Browse All Wallpapers</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -370,29 +408,31 @@ export default function WallpaperPage() {
 
   return (
     <main className="container mx-auto px-4 py-6 sm:py-8 max-w-7xl">
-      {/* Wallpaper Title - Desktop */}
-      <div className="hidden md:block mb-4 sm:mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{wallpaper.title}</h1>
-        <div className="flex items-center gap-3">
-          <Badge variant="secondary" className="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground">
-            {wallpaper.category}
-          </Badge>
-          {wallpaper.author && (
-            <span className="text-sm text-muted-foreground">by <span className="text-foreground/90 font-medium">{wallpaper.author.name}</span></span>
-          )}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{wallpaper.title}</h1>
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground">
+              {wallpaper.category}
+            </Badge>
+            {wallpaper.author && (
+              <span className="text-sm text-muted-foreground">by <span className="text-foreground/90 font-medium">{wallpaper.author.name}</span></span>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-        {/* Left: Wallpaper Image (Larger) */}
-        <div className="lg:col-span-8 space-y-4 sm:space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 sm:gap-8">
+        {/* Main Content Area - 5/7 columns on large screens */}
+        <div className="lg:col-span-5 order-2 lg:order-1">
+          {/* Wallpaper Image Container */}
           <div className={cn(
-            "relative rounded-xl overflow-hidden border shadow-lg",
-            previewMode === 'light' ? "bg-white border-primary/10" : "bg-black border-primary/20",
-            isAdmin && isEditing ? "aspect-auto min-h-[300px]" : "aspect-[16/9] sm:aspect-[4/3] md:aspect-[16/9]"
+            "relative group mb-4 flex items-center justify-center",
+            "bg-transparent",
+            isAdmin && isEditing ? "aspect-auto min-h-[300px] border border-primary/10 rounded-xl p-4" : "h-auto"
           )}>
             {isAdmin && isEditing ? (
-              <div className="p-4">
+              <div>
                 <Textarea 
                   value={editedDescription} 
                   onChange={(e) => setEditedDescription(e.target.value)}
@@ -450,28 +490,27 @@ export default function WallpaperPage() {
               </div>
             ) : (
               <>
-                <NextImage
-                  src={getCurrentImage()}
-                  alt={wallpaper.title}
-                  className="object-contain w-full h-full"
-                  fill={true}
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 60vw"
-                  priority
-                  onClick={() => setShowImageModal(true)}
-                />
+                <div className="overflow-hidden rounded-xl w-full flex justify-center">
+                  <img
+                    src={getCurrentImage()}
+                    alt={wallpaper.title}
+                    className="max-h-[600px] rounded-xl object-contain hover:scale-105 transition-transform duration-500 cursor-pointer"
+                    onClick={() => setShowImageModal(true)}
+                  />
+                </div>
                 
                 {/* Image Navigation Controls - Only shown when there are additional images */}
                 {wallpaper.additionalImages && wallpaper.additionalImages.length > 0 && (
                   <>
                     <button 
-                      className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-background/70 backdrop-blur-sm p-1 sm:p-2 text-foreground hover:bg-background/90 transition-colors"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-background/70 backdrop-blur-sm p-2 sm:p-3 text-foreground hover:bg-background/90 transition-colors opacity-0 group-hover:opacity-100 shadow-lg"
                       onClick={previousImage}
                       aria-label="Previous image"
                     >
                       <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                     <button 
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-background/70 backdrop-blur-sm p-1 sm:p-2 text-foreground hover:bg-background/90 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-background/70 backdrop-blur-sm p-2 sm:p-3 text-foreground hover:bg-background/90 transition-colors opacity-0 group-hover:opacity-100 shadow-lg"
                       onClick={nextImage}
                       aria-label="Next image"
                     >
@@ -479,148 +518,54 @@ export default function WallpaperPage() {
                     </button>
                   </>
                 )}
-                
-                {/* Toggle Preview Mode */}
-                <div className="absolute top-3 right-3 z-10">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full bg-background/50 backdrop-blur-sm h-8 w-8 sm:h-9 sm:w-9"
-                    onClick={() => setPreviewMode(previewMode === 'light' ? 'dark' : 'light')}
-                  >
-                    {previewMode === 'light' ? (
-                      <Moon className="h-4 w-4 sm:h-5 sm:w-5" />
-                    ) : (
-                      <Sun className="h-4 w-4 sm:h-5 sm:w-5" />
-                    )}
-                  </Button>
-                </div>
               </>
             )}
           </div>
           
-          {/* Image Thumbnails */}
+          {/* Image Thumbnails Row - Only if there are additional images */}
           {wallpaper.additionalImages && wallpaper.additionalImages.length > 0 && (
-            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 pt-1 px-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent snap-x">
+            <div className="flex gap-3 overflow-x-auto py-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent snap-x mb-6">
               <div
                 className={cn(
-                  "relative h-16 w-24 sm:h-20 sm:w-32 flex-shrink-0 rounded-lg cursor-pointer border-2 hover:shadow-lg transition-all duration-300 snap-start",
-                  currentImageIndex === 0 ? "border-primary shadow-primary/20" : "border-transparent hover:border-primary/50"
+                  "relative h-16 w-24 sm:h-20 sm:w-28 flex-shrink-0 rounded-xl cursor-pointer hover:shadow-xl transition-all duration-300 snap-start overflow-hidden",
+                  currentImageIndex === 0 ? "ring-2 ring-primary shadow-lg" : "ring-0 hover:ring-1 hover:ring-primary/50"
                 )}
                 onClick={() => setCurrentImageIndex(0)}
               >
-                <NextImage
+                <img
                   src={wallpaper.imageUrl}
                   alt="Thumbnail"
-                  fill={true}
-                  className="object-cover rounded-lg"
-                  sizes="100px"
+                  className="w-full h-full object-cover hover:scale-110 transition-transform duration-300 rounded-xl"
                 />
               </div>
               {wallpaper.additionalImages.map((img, idx) => (
                 <div
                   key={idx}
                   className={cn(
-                    "relative h-16 w-24 sm:h-20 sm:w-32 flex-shrink-0 rounded-lg cursor-pointer border-2 hover:shadow-lg transition-all duration-300 snap-start",
-                    currentImageIndex === idx + 1 ? "border-primary shadow-primary/20" : "border-transparent hover:border-primary/50"
+                    "relative h-16 w-24 sm:h-20 sm:w-28 flex-shrink-0 rounded-xl cursor-pointer hover:shadow-xl transition-all duration-300 snap-start overflow-hidden",
+                    currentImageIndex === idx + 1 ? "ring-2 ring-primary shadow-lg" : "ring-0 hover:ring-1 hover:ring-primary/50"
                   )}
                   onClick={() => setCurrentImageIndex(idx + 1)}
                 >
-                  <NextImage
+                  <img
                     src={img.url}
                     alt="Thumbnail"
-                    fill={true}
-                    className="object-cover rounded-lg"
-                    sizes="100px"
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-300 rounded-xl"
                   />
                 </div>
               ))}
             </div>
           )}
-         
-          {/* Mobile Title - Only shown on mobile */}
-          <div className="block md:hidden">
-            <h1 className="text-xl sm:text-2xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{wallpaper.title}</h1>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground">
-                {wallpaper.category}
-              </Badge>
-              {wallpaper.author && (
-                <span className="text-xs sm:text-sm text-muted-foreground">by <span className="text-foreground/90 font-medium">{wallpaper.author.name}</span></span>
-              )}
-            </div>
-          </div>
-          
-          {/* Wallpaper Description */}
-          <div className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 p-4 sm:p-6 shadow-sm">
-            <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">About this Wallpaper</h3>
-            <p className="text-sm sm:text-base text-muted-foreground whitespace-pre-line">{wallpaper.description}</p>
-            
-            {wallpaper.promptText && (
-              <div className="mt-4 pt-4 border-t border-primary/5">
-                <details className="text-sm text-muted-foreground">
-                  <summary className="cursor-pointer hover:text-foreground transition-colors">
-                    <span className="font-medium">Prompt Used</span>
-                  </summary>
-                  <p className="mt-2 p-3 bg-muted/30 rounded-lg text-xs sm:text-sm font-mono">{wallpaper.promptText}</p>
-                </details>
-              </div>
-            )}
-            
-            {/* Stats and Interaction Row */}
-            <div className="flex justify-between items-center mt-4 pt-4 border-t border-primary/5">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <Heart className={cn(
-                    "h-4 w-4 sm:h-5 sm:w-5 cursor-pointer transition-colors",
-                    isLiked ? "fill-primary text-primary" : "text-muted-foreground hover:text-primary"
-                  )} 
-                  onClick={() => setIsLiked(!isLiked)}
-                  />
-                  <span className="text-xs sm:text-sm">{wallpaper.favorites || 0}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-full"
-                >
-                  <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="sr-only">Share</span>
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className={cn(
-                    "h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-full",
-                    isSaved && "text-primary"
-                  )}
-                  onClick={() => setIsSaved(!isSaved)}
-                >
-                  <Bookmark className={cn(
-                    "h-4 w-4 sm:h-5 sm:w-5",
-                    isSaved && "fill-primary"
-                  )} />
-                  <span className="sr-only">Save</span>
-                </Button>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Right: Information & Download Options */}
-        <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+        {/* Sidebar - 2/7 columns on large screens */}
+        <div className="lg:col-span-2 space-y-4 order-1 lg:order-2">
           {/* Admin Controls */}
           {isAdmin && (
-            <div className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 p-4 sm:p-6 shadow-sm">
-              <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4 flex items-center">
-                <span className="mr-2">Admin Controls</span>
-              </h3>
+            <div className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 p-4 shadow-sm">
+              <h3 className="text-base font-medium mb-3">Admin Controls</h3>
               
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Button 
                   className="w-full" 
                   variant={isEditing ? "default" : "outline"}
@@ -633,7 +578,6 @@ export default function WallpaperPage() {
                   className="w-full" 
                   variant="outline"
                   onClick={() => {
-                    // Implement delete functionality
                     if (confirm("Are you sure you want to delete this wallpaper?")) {
                       // Delete logic here
                     }
@@ -645,118 +589,142 @@ export default function WallpaperPage() {
             </div>
           )}
           
-          {/* Download Options Card */}
+          {/* About This Wallpaper */}
           <div className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 p-4 sm:p-6 shadow-sm">
-            <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4 flex items-center">
-              <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-primary" />
-              Download Options
-            </h3>
-            
-            <div className="space-y-3">
-              {/* Quick Download - Default resolution */}
-              <Button
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={() => handleDownload(userResolution || undefined)}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download for {userResolution || 'Your Device'}
-              </Button>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base sm:text-lg font-medium">About this Wallpaper</h3>
               
-              {/* Other Resolutions */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  className="w-full text-xs sm:text-sm"
-                  onClick={() => handleDownload('HD')}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Heart className={cn(
+                    "h-4 w-4 sm:h-5 sm:w-5 cursor-pointer transition-colors",
+                    isLiked ? "fill-primary text-primary" : "text-muted-foreground hover:text-primary"
+                  )} 
+                  onClick={() => setIsLiked(!isLiked)}
+                  />
+                  <span className="text-xs sm:text-sm">{wallpaper.favorites || 0}</span>
+                </div>
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0 rounded-full"
                 >
-                  HD (1080p)
+                  <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="sr-only">Share</span>
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full text-xs sm:text-sm"
-                  onClick={() => handleDownload('4K')}
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={cn(
+                    "h-8 w-8 p-0 rounded-full",
+                    isSaved && "text-primary"
+                  )}
+                  onClick={() => setIsSaved(!isSaved)}
                 >
-                  4K UHD
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full text-xs sm:text-sm"
-                  onClick={() => handleDownload('UltraWide')}
-                >
-                  UltraWide
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full text-xs sm:text-sm"
-                  onClick={() => handleDownload('Mobile')}
-                >
-                  Mobile
+                  <Bookmark className={cn(
+                    "h-4 w-4 sm:h-5 sm:w-5",
+                    isSaved && "fill-primary"
+                  )} />
+                  <span className="sr-only">Save</span>
                 </Button>
               </div>
             </div>
+            
+            <p className="text-sm sm:text-base text-muted-foreground whitespace-pre-line mb-4">{wallpaper.description}</p>
+            
+            {wallpaper.promptText && (
+              <details className="text-sm text-muted-foreground mt-4 pt-4 border-t border-primary/5">
+                <summary className="cursor-pointer hover:text-foreground transition-colors">
+                  <span className="font-medium">Prompt Used</span>
+                </summary>
+                <p className="mt-2 p-3 bg-muted/30 rounded-lg text-xs sm:text-sm font-mono">{wallpaper.promptText}</p>
+              </details>
+            )}
           </div>
           
-          {/* Engagement Options */}
-          <div className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 p-4 sm:p-6 shadow-sm">
-            <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Wallpaper Details</h3>
+          {/* Wallpaper Details */}
+          <div className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 p-4 shadow-sm">
+            <h3 className="text-base font-medium mb-3">Wallpaper Details</h3>
             
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Views</span>
-                <span>{wallpaper.views || 0}</span>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Views</dt>
+                <dd className="font-medium">{wallpaper.views || 0}</dd>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Favorites</span>
-                <span>{wallpaper.favorites || 0}</span>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Favorites</dt>
+                <dd className="font-medium">{wallpaper.favorites || 0}</dd>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Category</span>
-                <span>{wallpaper.category}</span>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Category</dt>
+                <dd className="font-medium">{wallpaper.category}</dd>
               </div>
               {wallpaper.author && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Author</span>
-                  <span>{wallpaper.author.name}</span>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Author</dt>
+                  <dd className="font-medium">{wallpaper.author.name}</dd>
                 </div>
               )}
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Date Added</span>
-                <span>{new Date(wallpaper.createdAt).toLocaleDateString()}</span>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Date Added</dt>
+                <dd className="font-medium">{new Date(wallpaper.createdAt).toLocaleDateString()}</dd>
               </div>
-            </div>
+            </dl>
+          </div>
+          
+          {/* Download Button */}
+          <div className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 p-4 shadow-sm">
+            <Button
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg w-full"
+              onClick={() => handleDownload()}
+            >
+              <Download className="mr-2 h-5 w-5" />
+              Download Wallpaper
+            </Button>
           </div>
         </div>
       </div>
       
-      {/* Similar Wallpapers */}
+      {/* Similar Wallpapers - Full Width */}
       {suggestedWallpapers.length > 0 && (
-        <div className="mt-8 sm:mt-12">
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">You May Also Like</h2>
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-primary/80 to-secondary/80 bg-clip-text text-transparent">You May Also Like</h2>
+            <Button variant="link" asChild>
+              <Link href={`/category/${wallpaper.category}`}>View More</Link>
+            </Button>
+          </div>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {suggestedWallpapers.map(suggested => (
               <Link
                 key={suggested.id}
-                href={`/wallpapers/${suggested.slug}`}
+                href={`/wallpapers/${suggested.slug || suggested.id}`}
                 className="group"
               >
-                <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-background/70 border-primary/10 rounded-xl">
-                  <div className="relative aspect-[4/3]">
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30 z-10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <NextImage
+                <div className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 rounded-xl h-full">
+                  <div className="relative aspect-[3/4] overflow-hidden rounded-xl">
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <img
                       src={suggested.imageUrl}
                       alt={suggested.title}
-                      fill={true}
-                      className="object-cover transition-all duration-500 group-hover:scale-110"
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 rounded-xl"
                     />
+                    <div className="absolute bottom-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Badge variant="secondary" className="bg-primary/80 text-primary-foreground">
+                        View
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="p-3 sm:p-4">
-                    <h4 className="text-sm sm:text-base font-medium line-clamp-1 group-hover:text-primary transition-colors">
+                  <div className="p-2 sm:p-3">
+                    <h4 className="text-sm font-medium line-clamp-1 group-hover:text-primary transition-colors">
                       {suggested.title}
                     </h4>
                   </div>
-                </Card>
+                </div>
               </Link>
             ))}
           </div>
@@ -767,17 +735,14 @@ export default function WallpaperPage() {
       <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
         <DialogContent className="max-w-full sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-[80vw] p-0 bg-transparent border-none shadow-none">
           <div className="relative w-full aspect-auto max-h-[90vh] flex items-center justify-center">
-            <NextImage
+            <img
               src={getCurrentImage()}
               alt={wallpaper.title}
-              className="object-contain rounded-lg max-h-[90vh] w-auto"
-              width={1920}
-              height={1080}
-              priority
+              className="object-contain rounded-xl max-h-[90vh] max-w-full shadow-2xl"
             />
             
             <button
-              className="absolute top-2 right-2 rounded-full bg-background/70 backdrop-blur-sm p-2 text-foreground hover:bg-background/90 transition-colors"
+              className="absolute top-3 right-3 rounded-full bg-background/70 backdrop-blur-sm p-2 text-foreground hover:bg-background/90 transition-colors shadow-lg"
               onClick={() => setShowImageModal(false)}
             >
               ✕
@@ -786,7 +751,7 @@ export default function WallpaperPage() {
             {wallpaper.additionalImages && wallpaper.additionalImages.length > 0 && (
               <>
                 <button 
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-background/70 backdrop-blur-sm p-2 text-foreground hover:bg-background/90 transition-colors"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-background/70 backdrop-blur-sm p-3 text-foreground hover:bg-background/90 transition-colors shadow-lg"
                   onClick={(e) => {
                     e.stopPropagation();
                     previousImage();
@@ -795,7 +760,7 @@ export default function WallpaperPage() {
                   <ChevronLeft className="h-6 w-6" />
                 </button>
                 <button 
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-background/70 backdrop-blur-sm p-2 text-foreground hover:bg-background/90 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-background/70 backdrop-blur-sm p-3 text-foreground hover:bg-background/90 transition-colors shadow-lg"
                   onClick={(e) => {
                     e.stopPropagation();
                     nextImage();
@@ -805,6 +770,20 @@ export default function WallpaperPage() {
                 </button>
               </>
             )}
+            
+            {/* Quick Download Button in Modal */}
+            <div className="absolute bottom-4 right-4">
+              <Button
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+                onClick={() => {
+                  handleDownload();
+                  setShowImageModal(false);
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Wallpaper
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

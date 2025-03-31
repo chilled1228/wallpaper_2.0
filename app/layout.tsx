@@ -96,7 +96,7 @@ export default function RootLayout({
           />
           <div className="relative flex min-h-screen flex-col">
             <Navbar />
-            <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-4 md:py-6 safe-padding-bottom">
+            <main className="flex-1 px-4 sm:px-6 lg:px-8 py-2 sm:py-4 md:py-6 safe-padding-bottom">
               {children}
             </main>
             <Footer />

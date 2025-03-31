@@ -63,4 +63,5 @@ try {
   throw error;
 }
 
-export { db }; 
+// Export the admin object and db at the bottom of the file
+export { db, admin }; 

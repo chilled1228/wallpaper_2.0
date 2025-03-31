@@ -1,13 +1,15 @@
 import { Metadata } from 'next'
 import { defaultMetadata } from './metadata'
 import { Suspense } from "react"
-import { Loader2, ChevronRight, Download, ArrowRight } from 'lucide-react'
+import { Loader2, ChevronRight, Download, ArrowRight, SearchIcon, Flame, SparklesIcon, HeartIcon, TrendingUpIcon, ImageIcon } from 'lucide-react'
 import { WallpaperGrid } from '@/components/wallpaper-grid'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import NextImage from 'next/image'
 import { db } from '@/lib/firebase'
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 
 // Generate metadata for SEO
 export const metadata: Metadata = defaultMetadata
@@ -79,48 +81,99 @@ async function getFeaturedWallpaper() {
   }
 }
 
+// Get popular categories
+async function getPopularCategories() {
+  const categories = [
+    { name: 'Nature', color: 'from-green-500 to-emerald-700', icon: '🌿', count: '1.2k+' },
+    { name: 'Abstract', color: 'from-purple-500 to-indigo-700', icon: '🎨', count: '850+' },
+    { name: 'Minimal', color: 'from-gray-500 to-slate-700', icon: '◾', count: '760+' },
+    { name: 'Space', color: 'from-blue-500 to-violet-700', icon: '🌌', count: '620+' },
+    { name: 'City', color: 'from-amber-500 to-orange-700', icon: '🏙️', count: '540+' },
+    { name: 'Technology', color: 'from-cyan-500 to-blue-700', icon: '💻', count: '480+' }
+  ];
+  
+  return categories;
+}
+
 export default async function HomePage() {
   const featuredWallpaper = await getFeaturedWallpaper();
+  const popularCategories = await getPopularCategories();
   
   return (
-    <div className="w-full">
-      {/* Hero Section */}
-      <section className="relative w-full overflow-hidden bg-gradient-to-b from-background to-background/80 mb-8 sm:mb-12 md:mb-16">
-        <div className="absolute inset-0 opacity-10 blur-3xl pointer-events-none bg-gradient-to-r from-primary to-secondary"></div>
+    <div className="w-full bg-gradient-to-b from-background via-background/95 to-background/90">
+      {/* Hero Section - Enhanced */}
+      <section className="relative w-full overflow-hidden mb-12 sm:mb-16 md:mb-20 py-10 md:py-16">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-70"></div>
+          <div className="absolute top-1/2 -left-24 w-72 h-72 bg-secondary/10 rounded-full blur-3xl opacity-70"></div>
+        </div>
         
-        <div className="container mx-auto px-4 py-12 md:py-20 max-w-7xl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-6 space-y-6">
-              <div className="space-y-4">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  Stunning Wallpapers<br />for Every Device
+        <div className="container px-4 sm:px-6 mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            {/* Content Side */}
+            <div className="space-y-8">
+              <div className="space-y-5">
+                <div className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
+                  <SparklesIcon className="mr-1 h-3.5 w-3.5" />
+                  <span>Premium quality wallpapers</span>
+                </div>
+                
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
+                  <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Stunning Wallpapers</span>
+                  <br />
+                  <span>for Every Device</span>
                 </h1>
+                
                 <p className="text-lg text-muted-foreground max-w-md">
-                  Discover and download beautiful high-quality wallpapers for your desktop, laptop, tablet or mobile device.
+                  Transform your screens with our curated collection of high-resolution wallpapers for desktops, phones, and tablets.
                 </p>
               </div>
               
-              <div className="flex flex-wrap gap-4 pt-2">
-                <Button asChild size="lg" className="rounded-xl">
+              {/* Search Bar */}
+              <div className="relative max-w-md">
+                <div className="relative">
+                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    type="text" 
+                    placeholder="Search for wallpapers..." 
+                    className="pl-10 pr-20 h-12 rounded-full border-primary/20 focus:border-primary shadow-sm"
+                  />
+                  <Button size="sm" className="absolute right-1 top-1/2 transform -translate-y-1/2 rounded-full px-4 h-10">
+                    Search
+                  </Button>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span>Popular:</span>
+                  <Link href="/search?q=mountain" className="hover:text-primary transition-colors">Mountain</Link>
+                  <Link href="/search?q=ocean" className="hover:text-primary transition-colors">Ocean</Link>
+                  <Link href="/search?q=minimal" className="hover:text-primary transition-colors">Minimal</Link>
+                  <Link href="/search?q=space" className="hover:text-primary transition-colors">Space</Link>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button asChild size="lg" className="rounded-full">
                   <Link href="#explore">
                     Explore Collection <ChevronRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="rounded-xl">
+                <Button asChild size="lg" variant="outline" className="rounded-full">
                   <Link href="/categories">
                     Browse Categories <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </div>
               
-              <div className="flex items-center gap-2 pt-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Download className="h-4 w-4 text-primary" />
-                <span>Free downloads for personal use</span>
+                <span>Free downloads • No attribution required • Personal & commercial use</span>
               </div>
             </div>
             
-            <div className="lg:col-span-6 hidden md:block">
-              <div className="relative aspect-[16/9] rounded-xl overflow-hidden shadow-2xl shadow-primary/10 border border-primary/10 transform rotate-1 hover:rotate-0 transition-all duration-700">
+            {/* Featured Image Side */}
+            <div className="relative mt-8 lg:mt-0">
+              <div className="relative aspect-[5/4] md:aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 border border-primary/10">
                 <NextImage
                   src={featuredWallpaper.imageUrl}
                   alt={featuredWallpaper.title}
@@ -129,10 +182,14 @@ export default async function HomePage() {
                   sizes="(max-width: 768px) 100vw, 50vw"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70"></div>
-                <div className="absolute bottom-4 left-4 right-4">
-                  <span className="px-3 py-1 bg-primary/90 text-primary-foreground text-xs font-medium rounded-full">Featured</span>
-                  <h3 className="text-white font-medium mt-2 line-clamp-1">{featuredWallpaper.title}</h3>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                <div className="absolute bottom-5 left-5 right-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-3 py-1 bg-primary/90 text-primary-foreground text-xs font-medium rounded-full">Featured</span>
+                    <span className="px-3 py-1 bg-black/50 text-white text-xs font-medium rounded-full">4K Quality</span>
+                  </div>
+                  <h3 className="text-white font-medium text-lg line-clamp-1">{featuredWallpaper.title}</h3>
+                  <p className="text-white/80 text-sm mt-1 line-clamp-1">Elevate your desktop with our handpicked wallpaper of the week</p>
                 </div>
                 {featuredWallpaper.id !== 'default' && (
                   <Link 
@@ -142,117 +199,263 @@ export default async function HomePage() {
                   />
                 )}
               </div>
-            </div>
-            
-            {/* Mobile Featured Image */}
-            <div className="lg:hidden col-span-1 -mx-4 sm:mx-0 sm:mt-4">
-              <div className="relative aspect-[16/9] sm:rounded-xl overflow-hidden shadow-lg shadow-primary/10 border-y sm:border border-primary/10">
-                <NextImage
-                  src={featuredWallpaper.imageUrl}
-                  alt={featuredWallpaper.title}
-                  fill={true}
-                  className="object-cover"
-                  sizes="100vw"
-                  priority
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70"></div>
-                <div className="absolute bottom-3 left-3 right-3">
-                  <span className="px-2 py-0.5 bg-primary/90 text-primary-foreground text-xs font-medium rounded-full">Featured</span>
-                  <h3 className="text-white text-sm font-medium mt-1 line-clamp-1">{featuredWallpaper.title}</h3>
+              
+              {/* Stats overlay */}
+              <div className="absolute -bottom-5 -right-5 md:-bottom-8 md:-right-8 bg-background/80 backdrop-blur-xl rounded-2xl p-4 md:p-6 shadow-lg border border-primary/10">
+                <div className="flex gap-4 md:gap-6">
+                  <div className="text-center">
+                    <p className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">10K+</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Wallpapers</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">4K</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Resolution</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">100%</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Free</p>
+                  </div>
                 </div>
-                {featuredWallpaper.id !== 'default' && (
-                  <Link 
-                    href={`/wallpapers/${featuredWallpaper.slug}`} 
-                    className="absolute inset-0 z-10"
-                    aria-label={`View ${featuredWallpaper.title}`} 
-                  />
-                )}
               </div>
             </div>
           </div>
         </div>
       </section>
       
-      {/* Categories Section */}
-      <section className="container mx-auto px-4 py-8 mb-16 max-w-7xl">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold">Browse by Category</h2>
-          <Button variant="ghost" asChild className="group">
-            <Link href="/categories">
-              View All <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {['Nature', 'Abstract', 'Minimal', 'Space', 'City', 'Technology'].map((category) => (
-            <Link href={`/category/${category.toLowerCase()}`} key={category} className="group">
-              <div className="relative bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 shadow-sm overflow-hidden aspect-square hover:shadow-md hover:border-primary/30 transition-all duration-300">
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-lg font-medium group-hover:text-white transition-colors duration-300">{category}</span>
+      {/* Categories Section - Enhanced */}
+      <section className="w-full py-16 mb-16">
+        <div className="container px-4 sm:px-6 mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+            <div>
+              <h2 className="text-3xl font-bold">Popular Categories</h2>
+              <p className="text-muted-foreground mt-2">Browse wallpapers by your favorite themes</p>
+            </div>
+            <Button variant="outline" asChild className="group rounded-full">
+              <Link href="/categories">
+                View All Categories <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
+            {popularCategories.map((category) => (
+              <Link href={`/category/${category.name.toLowerCase()}`} key={category.name}>
+                <div className="group relative overflow-hidden rounded-xl">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-80 group-hover:opacity-90 transition-opacity duration-300`}></div>
+                  <div className="relative p-6 md:p-8 h-40 flex flex-col justify-between">
+                    <span className="text-2xl">{category.icon}</span>
+                    <div>
+                      <h3 className="text-white font-medium text-lg">{category.name}</h3>
+                      <p className="text-white/90 text-sm mt-1 flex items-center">
+                        <ImageIcon className="h-3 w-3 mr-1 inline-block" /> 
+                        {category.count} wallpapers
+                      </p>
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-white/25 rounded-xl transition-all duration-300"></div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
       
-      {/* Featured Wallpapers */}
-      <section className="container mx-auto px-4 mb-16 max-w-7xl">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold">Featured Wallpapers</h2>
-          <Button variant="ghost" asChild className="group">
-            <Link href="/featured">
-              View All <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="group relative aspect-[4/3] rounded-xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <span className="absolute top-3 right-3 px-2 py-1 bg-primary/90 text-primary-foreground text-xs font-medium rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">Featured</span>
-              <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                <h3 className="text-white font-medium line-clamp-1">Featured Wallpaper {i}</h3>
-                <p className="text-white/80 text-sm mt-1 line-clamp-1">Beautiful high-resolution wallpaper</p>
+      {/* Trending Section - New */}
+      <section className="w-full py-12 mb-16 bg-muted/30">
+        <div className="container px-4 sm:px-6 mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUpIcon className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium text-primary">Trending now</span>
               </div>
+              <h2 className="text-3xl font-bold">Most Popular This Week</h2>
             </div>
-          ))}
+            <Button variant="outline" asChild className="group rounded-full">
+              <Link href="/trending">
+                View All Trending <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Feature larger trending wallpaper */}
+            <div className="md:col-span-2 group relative aspect-[4/3] md:aspect-square rounded-xl overflow-hidden shadow-lg">
+              <NextImage
+                src="/trending-wallpaper-1.jpg"
+                alt="Trending Wallpaper"
+                fill={true}
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80"></div>
+              <div className="absolute top-4 left-4 flex items-center gap-2">
+                <span className="px-3 py-1 bg-white/90 text-black text-xs font-medium rounded-full">Trending #1</span>
+                <span className="flex items-center gap-1 px-3 py-1 bg-black/50 text-white text-xs font-medium rounded-full">
+                  <HeartIcon className="h-3 w-3" /> 2.4k
+                </span>
+              </div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h3 className="text-white font-medium text-lg">Mystical Mountain Lake</h3>
+                <p className="text-white/80 text-sm mt-1">Serene landscape with vibrant colors</p>
+              </div>
+              <Link 
+                href="/wallpapers/mystical-mountain-lake" 
+                className="absolute inset-0 z-10"
+                aria-label="View Mystical Mountain Lake wallpaper" 
+              />
+            </div>
+            
+            {/* Three smaller trending wallpapers */}
+            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 md:grid-rows-2 gap-4 md:gap-6">
+              {[
+                { title: "Minimal Workspace", desc: "Clean and productive setup", trending: "#2", likes: "1.8k" },
+                { title: "Neon City Nights", desc: "Cyberpunk urban landscape", trending: "#3", likes: "1.5k" },
+                { title: "Ocean Sunrise", desc: "Beautiful morning at the beach", trending: "#4", likes: "1.2k" }
+              ].map((item, i) => (
+                <div key={i} className={`group relative ${i === 2 ? 'sm:col-span-2 md:col-span-1' : ''} aspect-video md:aspect-square rounded-xl overflow-hidden shadow-lg`}>
+                  <NextImage
+                    src={`/trending-wallpaper-${i+2}.jpg`}
+                    alt={item.title}
+                    fill={true}
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80"></div>
+                  <div className="absolute top-3 left-3 flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-white/90 text-black text-xs font-medium rounded-full">{item.trending}</span>
+                    <span className="flex items-center gap-1 px-2 py-0.5 bg-black/50 text-white text-xs font-medium rounded-full">
+                      <HeartIcon className="h-2.5 w-2.5" /> {item.likes}
+                    </span>
+                  </div>
+                  <div className="absolute bottom-3 left-3 right-3">
+                    <h3 className="text-white font-medium">{item.title}</h3>
+                    <p className="text-white/80 text-xs mt-1">{item.desc}</p>
+                  </div>
+                  <Link 
+                    href={`/wallpapers/${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                    className="absolute inset-0 z-10"
+                    aria-label={`View ${item.title} wallpaper`} 
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Collections Section - New */}
+      <section className="w-full py-12 mb-16">
+        <div className="container px-4 sm:px-6 mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Flame className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium text-primary">Handpicked for you</span>
+              </div>
+              <h2 className="text-3xl font-bold">Curated Collections</h2>
+              <p className="text-muted-foreground mt-2">Discover themed wallpaper sets for every mood and occasion</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { title: "Work From Home", count: "24 wallpapers", image: "/collection-work.jpg", slug: "work-from-home" },
+              { title: "Calm & Mindful", count: "18 wallpapers", image: "/collection-calm.jpg", slug: "calm-mindful" },
+              { title: "Vibrant Colors", count: "32 wallpapers", image: "/collection-vibrant.jpg", slug: "vibrant-colors" }
+            ].map((collection, i) => (
+              <Link href={`/collections/${collection.slug}`} key={i}>
+                <div className="group relative aspect-[3/2] rounded-xl overflow-hidden shadow-lg">
+                  <NextImage
+                    src={collection.image}
+                    alt={collection.title}
+                    fill={true}
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80"></div>
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <h3 className="text-white font-medium text-xl">{collection.title}</h3>
+                    <p className="text-white/80 text-sm mt-1">{collection.count}</p>
+                    <Button variant="outline" size="sm" className="mt-4 border-white/30 text-white hover:bg-white/20 rounded-full">
+                      View Collection
+                    </Button>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
       
       {/* Recent Wallpapers - Full Width */}
-      <section id="explore" className="container mx-auto px-4 py-8 mb-12 max-w-7xl">
-        <h2 className="text-3xl font-bold mb-8 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Latest Wallpapers</h2>
-        
-        <Suspense fallback={
-          <div className="flex items-center justify-center h-[300px]">
-            <Loader2 className="h-6 w-6 animate-spin" />
+      <section id="explore" className="w-full py-12 mb-16">
+        <div className="container px-4 sm:px-6 mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+            <div>
+              <h2 className="text-3xl font-bold">Latest Wallpapers</h2>
+              <p className="text-muted-foreground mt-2">Fresh and new additions to our collection</p>
+            </div>
+            <Button variant="outline" asChild className="group rounded-full">
+              <Link href="/latest">
+                View All Latest <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </Button>
           </div>
-        }>
-          <WallpaperGrid />
-        </Suspense>
+          
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-[300px]">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          }>
+            <WallpaperGrid />
+          </Suspense>
+        </div>
       </section>
       
-      {/* Newsletter/Download App CTA */}
-      <section className="container mx-auto px-4 py-8 mb-12 max-w-7xl">
-        <div className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 p-8 md:p-12 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="space-y-4">
-              <h2 className="text-2xl font-bold">Get Access to Premium Wallpapers</h2>
-              <p className="text-muted-foreground">Subscribe to our newsletter and get access to exclusive wallpapers and early access to new collections.</p>
-              <div className="flex gap-2 mt-4">
-                <Button className="rounded-xl">Subscribe</Button>
-                <Button variant="outline" className="rounded-xl">Learn More</Button>
-              </div>
+      {/* Newsletter/Download App CTA - Enhanced */}
+      <section className="w-full py-8 mb-16">
+        <div className="container px-4 sm:px-6 mx-auto">
+          <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/10 backdrop-blur-xl rounded-2xl border border-primary/10 p-8 md:p-12 shadow-lg">
+            {/* Background elements */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute -top-24 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl"></div>
             </div>
-            <div className="hidden md:block">
-              <div className="aspect-[16/9] rounded-lg overflow-hidden shadow-lg border border-primary/10">
-                {/* Placeholder for app screenshot or newsletter image */}
-                <div className="h-full w-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                  <span className="text-xl font-medium text-muted-foreground">Premium Wallpapers</span>
+            
+            <div className="relative grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <div className="space-y-6">
+                <h2 className="text-3xl font-bold">Get Premium Wallpapers</h2>
+                <p className="text-muted-foreground max-w-md">
+                  Subscribe to our newsletter for exclusive wallpapers, early access to new collections, and special updates.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                  <div className="flex-1">
+                    <Input 
+                      type="email" 
+                      placeholder="Enter your email" 
+                      className="h-12 rounded-full border-primary/20"
+                    />
+                  </div>
+                  <Button className="h-12 rounded-full px-6">
+                    Subscribe Now
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  By subscribing, you agree to our privacy policy. We'll never spam you.
+                </p>
+              </div>
+              
+              <div className="relative h-60 md:h-72 -mb-8 md:mb-0">
+                <div className="absolute inset-y-0 right-0 w-full md:w-[120%] h-full">
+                  <div className="relative h-full w-full">
+                    <NextImage
+                      src="/devices-mockup.png"
+                      alt="Our wallpapers on multiple devices"
+                      fill
+                      className="object-contain object-bottom"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

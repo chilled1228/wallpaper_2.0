@@ -22,6 +22,15 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*'); // Only allow images
     }
     
+    // Rules for wallpapers path (used in bulk upload)
+    match /wallpapers/{fileName} {
+      // Allow read access to all users
+      allow read: if true;
+      
+      // Allow write and delete access to authenticated users
+      allow write, delete: if request.auth != null;
+    }
+    
     // Rules for blog images
     match /blog-images/{fileName} {
       // Allow read access to all users

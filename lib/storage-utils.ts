@@ -1,5 +1,6 @@
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, UploadResult } from 'firebase/storage';
+import { uploadToR2, isR2Path } from './r2-storage-utils';
 
 /**
  * Uploads an image to Firebase Storage and returns the download URL
@@ -9,6 +10,12 @@ import { ref, uploadBytes, getDownloadURL, UploadResult } from 'firebase/storage
  */
 export async function uploadImage(file: File, path: string): Promise<string> {
   try {
+    // Check if this should go to R2
+    if (isR2Path(path)) {
+      return await uploadToR2(file, path);
+    }
+
+    // If not R2, use Firebase Storage
     // Validate file
     if (!file) {
       throw new Error('No file provided for upload');

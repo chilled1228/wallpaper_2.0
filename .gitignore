@@ -35,4 +35,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Cloudflare R2
+.env.local
+.r2-credentials
+
 certificates

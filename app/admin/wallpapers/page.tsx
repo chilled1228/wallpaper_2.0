@@ -10,7 +10,7 @@ import { ImageUpload } from '@/components/blog/image-upload'
 import { toast } from '@/components/ui/use-toast'
 import { db, auth } from '@/lib/firebase'
 import { doc, getDoc, collection, getDocs, orderBy, query } from 'firebase/firestore'
-import { Loader2, Trash2, Edit, Plus, Image as ImageIcon, Tag, Clock, FileText } from 'lucide-react'
+import { Loader2, Trash2, Edit, Plus, Image as ImageIcon, Tag, Clock, FileText, Upload } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -422,7 +422,7 @@ export default function AdminWallpapersPage() {
       status: wallpaper.status || 'active',
       featured: wallpaper.featured ?? false
     })
-    setActiveTab("add")
+    setActiveTab("create")
   }
 
   const handleCancel = () => {
@@ -464,30 +464,146 @@ export default function AdminWallpapersPage() {
     )
   }
 
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Wallpapers</h1>
-        <Button 
-          onClick={() => {
-            setSelectedWallpaper(null);
-            setFormData(initialFormData);
-            setActiveTab("add");
-          }} 
-          className="flex items-center gap-1"
-        >
-          <Plus className="h-4 w-4" />
-          Add New
-        </Button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Wallpapers</h1>
+          <p className="text-muted-foreground">
+            Manage your wallpaper collection
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push('/admin/wallpapers/bulk-upload')}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Upload
+          </Button>
+          
+          <Button
+            onClick={() => {
+              setFormData(initialFormData)
+              setActiveTab("create")
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Wallpaper
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="add">{selectedWallpaper ? 'Edit Wallpaper' : 'Add Wallpaper'}</TabsTrigger>
-          <TabsTrigger value="list">All Wallpapers</TabsTrigger>
+        <TabsList>
+          <TabsTrigger value="list">Wallpapers List</TabsTrigger>
+          <TabsTrigger value="create">
+            {selectedWallpaper ? 'Edit Wallpaper' : 'Add Wallpaper'}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="add" className="space-y-6">
+        <TabsContent value="list">
+          <Card>
+            <CardContent className="pt-6">
+              {wallpapers.length === 0 ? (
+                <div className="text-center py-10">
+                  <p className="text-muted-foreground">No wallpapers found</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Image</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Featured</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {wallpapers.map(wallpaper => (
+                        <TableRow key={wallpaper.id}>
+                          <TableCell>
+                            <div className="relative h-10 w-10 rounded overflow-hidden bg-muted">
+                              {wallpaper.imageUrl && (
+                                <img 
+                                  src={wallpaper.imageUrl} 
+                                  alt={wallpaper.title}
+                                  className="h-full w-full object-cover"
+                                />
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{wallpaper.title}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{wallpaper.category}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={
+                                wallpaper.status === 'active' 
+                                  ? 'default' 
+                                  : wallpaper.status === 'draft' 
+                                    ? 'secondary' 
+                                    : 'outline'
+                              }
+                            >
+                              {wallpaper.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {wallpaper.featured ? 
+                              <Badge variant="default">Featured</Badge> : 
+                              <span className="text-muted-foreground">—</span>
+                            }
+                          </TableCell>
+                          <TableCell>
+                            {new Date(wallpaper.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleEdit(wallpaper)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                                onClick={() => {
+                                  setWallpaperToDelete(wallpaper.id);
+                                  setDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="create" className="space-y-6">
           <Card>
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -661,99 +777,6 @@ export default function AdminWallpapersPage() {
                   </Button>
                 </div>
               </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="list">
-          <Card>
-            <CardContent className="pt-6">
-              {wallpapers.length === 0 ? (
-                <div className="text-center py-10">
-                  <p className="text-muted-foreground">No wallpapers found</p>
-                </div>
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Image</TableHead>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Featured</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {wallpapers.map(wallpaper => (
-                        <TableRow key={wallpaper.id}>
-                          <TableCell>
-                            <div className="relative h-10 w-10 rounded overflow-hidden bg-muted">
-                              {wallpaper.imageUrl && (
-                                <img 
-                                  src={wallpaper.imageUrl} 
-                                  alt={wallpaper.title}
-                                  className="h-full w-full object-cover"
-                                />
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>{wallpaper.title}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{wallpaper.category}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant={
-                                wallpaper.status === 'active' 
-                                  ? 'default' 
-                                  : wallpaper.status === 'draft' 
-                                    ? 'secondary' 
-                                    : 'outline'
-                              }
-                            >
-                              {wallpaper.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {wallpaper.featured ? 
-                              <Badge variant="default">Featured</Badge> : 
-                              <span className="text-muted-foreground">—</span>
-                            }
-                          </TableCell>
-                          <TableCell>
-                            {new Date(wallpaper.createdAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end space-x-2">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleEdit(wallpaper)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                onClick={() => {
-                                  setWallpaperToDelete(wallpaper.id);
-                                  setDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
