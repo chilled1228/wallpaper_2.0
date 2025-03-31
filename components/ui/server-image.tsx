@@ -10,9 +10,34 @@ function sanitizeR2Url(url: string): string {
   
   // Quick check for properly formed URLs
   if (url.startsWith('https://')) return url;
+  if (url.startsWith('http://') && !url.includes('.r2.dev') && !url.includes('cloudflarestorage')) return url;
   
-  // Fix common R2 URL issues
+  // Convert HTTP to HTTPS for R2 URLs (they require HTTPS)
+  if (url.startsWith('http://') && (url.includes('.r2.dev') || url.includes('cloudflarestorage'))) {
+    return url.replace('http://', 'https://');
+  }
+  
+  // Fix common R2 URL issues - add https:// to URLs without protocol
   if ((url.includes('.r2.dev') || url.includes('cloudflarestorage')) && !url.startsWith('http')) {
+    return `https://${url}`;
+  }
+  
+  // Handle Cloudflare R2 custom domain if configured
+  const r2PublicDomain = typeof process !== 'undefined' ? 
+    process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_DOMAIN : 
+    '';
+    
+  if (r2PublicDomain && 
+      !url.includes(r2PublicDomain) && 
+      !url.includes('.r2.dev') && 
+      !url.startsWith('http') &&
+      !url.startsWith('/')) {
+    // Construct URL with the custom domain
+    return `https://${r2PublicDomain.replace(/\/+$/, '')}/${url.replace(/^\/+/, '')}`;
+  }
+  
+  // For URLs that look valid but don't have a protocol, add https:// as a default
+  if (!url.startsWith('http') && !url.startsWith('/') && url.includes('.') && !url.startsWith('data:')) {
     return `https://${url}`;
   }
   
@@ -35,6 +60,9 @@ interface ServerImageProps {
   blurDataURL?: string;
 }
 
+// Default blur data URL for minimal loading flash
+const defaultBlurDataURL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+";
+
 export function ServerImage({
   src,
   alt,
@@ -47,8 +75,8 @@ export function ServerImage({
   priority = false,
   quality = 75,
   loading,
-  placeholder,
-  blurDataURL,
+  placeholder = 'blur', // Default to blur for smoother loading
+  blurDataURL = defaultBlurDataURL,
 }: ServerImageProps) {
   // Minimal processing - just enough to fix common issues
   const sanitizedSrc = sanitizeR2Url(src);
@@ -70,35 +98,32 @@ export function ServerImage({
     loading: loading || (priority ? 'eager' : 'lazy'),
     sizes: sizes || '(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw',
     decoding: 'async' as const,
+    placeholder,
+    blurDataURL,
+    style: { color: 'transparent' } // Prevent alt text flash during loading
   };
-  
-  // Only include placeholder properties if provided
-  if (placeholder) {
-    // @ts-ignore - We're adding these conditionally
-    imageProps.placeholder = placeholder;
-    if (blurDataURL && placeholder === 'blur') {
-      // @ts-ignore
-      imageProps.blurDataURL = blurDataURL;
-    }
-  }
   
   // Optimized rendering path
   if (fill) {
     return (
-      <Image
-        {...imageProps}
-        src={finalSrc}
-        fill
-      />
+      <div className="w-full h-full relative bg-muted/20">
+        <Image
+          {...imageProps}
+          src={finalSrc}
+          fill
+        />
+      </div>
     );
   }
   
   return (
-    <Image
-      {...imageProps}
-      src={finalSrc}
-      width={width || 1200}
-      height={height || 800}
-    />
+    <div className="relative bg-muted/20">
+      <Image
+        {...imageProps}
+        src={finalSrc}
+        width={width || 1200}
+        height={height || 800}
+      />
+    </div>
   );
 } 

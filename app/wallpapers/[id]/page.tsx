@@ -303,24 +303,92 @@ export default function WallpaperPage() {
     }
   }
 
-  const handleDownload = (resolution?: string) => {
+  const handleDownload = async (resolution?: string) => {
     if (!wallpaper?.imageUrl) return;
     
-    // Just use the original image URL for all downloads
-    const imageUrl = wallpaper.imageUrl;
-    
-    // Create an anchor element and set download attribute
-    const a = document.createElement('a');
-    a.href = imageUrl;
-    a.download = `${wallpaper.title.replace(/\s+/g, '-')}.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    toast({
-      title: "Download Started",
-      description: "Wallpaper downloaded successfully",
-    });
+    try {
+      // Get the current image (main or additional) that's being viewed
+      const currentImageUrl = getCurrentImage();
+      
+      // Show loading toast
+      toast({
+        title: "Download Started",
+        description: "Preparing your wallpaper...",
+      });
+
+      // For R2 URLs, we need to use the API route to handle authentication
+      if (currentImageUrl.includes('.r2.cloudflarestorage.com')) {
+        try {
+          const response = await fetch(`/api/download?url=${encodeURIComponent(currentImageUrl)}`);
+          if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+          
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `${wallpaper.title.replace(/[^a-zA-Z0-9-_]/g, '-')}-wallpaper.jpg`;
+          document.body.appendChild(a);
+          a.click();
+          
+          // Clean up
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+          }, 100);
+          
+          toast({
+            title: "Download Complete",
+            description: "Wallpaper downloaded successfully",
+          });
+          return;
+        } catch (error) {
+          console.error('Error downloading from R2:', error);
+          throw new Error('Failed to download from R2 storage');
+        }
+      }
+      
+      // For non-R2 URLs (local or external)
+      let downloadUrl = currentImageUrl;
+      
+      // For local paths, convert to full URL
+      if (downloadUrl.startsWith('/')) {
+        downloadUrl = `${window.location.origin}${downloadUrl}`;
+      }
+      
+      console.log('Starting download from URL:', downloadUrl);
+      
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${wallpaper.title.replace(/[^a-zA-Z0-9-_]/g, '-')}-wallpaper.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      }, 100);
+      
+      toast({
+        title: "Download Complete",
+        description: "Wallpaper downloaded successfully",
+      });
+      
+    } catch (error) {
+      console.error('Error downloading wallpaper:', error);
+      toast({
+        title: "Download Failed",
+        description: "There was a problem downloading your wallpaper. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddImages = (urls: string[]) => {
@@ -395,9 +463,9 @@ export default function WallpaperPage() {
     return wallpaper.imageUrl;
   };
 
-  const handleDownloadButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleDownloadButtonClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    handleDownload();
+    await handleDownload();
   };
 
   // Handle touch events for swiping between images
@@ -527,8 +595,8 @@ export default function WallpaperPage() {
   }
 
   return (
-    <main className="container mx-auto px-4 py-6 sm:py-8 max-w-7xl" style={{ "--header-offset": "2rem" } as React.CSSProperties}>
-      <header className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 sm:mb-6">
+    <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-screen-2xl" style={{ "--header-offset": "2rem" } as React.CSSProperties}>
+      <header className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
         <div className="space-y-2">
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{wallpaper.title}</h1>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -574,15 +642,15 @@ export default function WallpaperPage() {
       </header>
 
       <div className="relative">
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-4 sm:gap-6 lg:gap-8 lg:items-start">
-          {/* Main Content Area - 5/7 columns on large screens */}
-          <section className="lg:col-span-5 order-1 lg:order-1 space-y-3 sm:space-y-4 lg:sticky" style={{ top: 'var(--header-offset, 2rem)' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 lg:items-start">
+          {/* Main Content Area - Adjusted to 9/12 columns */}
+          <section className="lg:col-span-9 order-1 lg:order-1 space-y-3 lg:sticky" style={{ top: 'var(--header-offset, 2rem)' }}>
             {/* Wallpaper Image Container */}
             <section 
               ref={mainImageRef}
               className={cn(
-                "w-full h-full relative rounded-2xl overflow-hidden",
-                "border border-border/30 shadow-xl"
+                "w-full min-h-[400px] h-[calc(100vh-12rem)] relative rounded-2xl overflow-hidden",
+                "border border-border/30 shadow-xl bg-muted/5"
               )}
               onClick={() => setShowImageModal(true)}
             >
@@ -591,8 +659,8 @@ export default function WallpaperPage() {
                 alt={wallpaper.title}
                 fallbackSrc="/default-wallpaper.jpg"
                 fill={true}
-                className="object-cover"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 75vw, 50vw"
+                className="object-contain"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 75vw, 66vw"
                 priority={true}
                 quality={90}
                 placeholder="blur"
@@ -621,16 +689,16 @@ export default function WallpaperPage() {
             )}
           </section>
 
-          {/* Sidebar - 2/7 columns on large screens */}
-          <aside className="lg:col-span-2 space-y-3 sm:space-y-4 order-2 lg:order-2">
-            <div className="lg:sticky space-y-3 sm:space-y-4" style={{ top: 'var(--header-offset, 2rem)' }}>
+          {/* Sidebar - Adjusted to 3/12 columns */}
+          <aside className="lg:col-span-3 space-y-3 order-2 lg:order-2">
+            <div className="lg:sticky space-y-3" style={{ top: 'var(--header-offset, 2rem)' }}>
               {/* Download Section - Most Important Action */}
               <section className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 p-3 sm:p-4 shadow-sm">
                 <div className="space-y-3">
                   <Button
                     size="lg"
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
-                    onClick={() => handleDownload()}
+                    onClick={handleDownloadButtonClick}
                   >
                     <Download className="mr-2 h-5 w-5" />
                     Download Wallpaper
@@ -766,10 +834,10 @@ export default function WallpaperPage() {
           </aside>
         </div>
         
-        {/* Similar Wallpapers - Full Width */}
+        {/* Similar Wallpapers - Adjusted grid */}
         {suggestedWallpapers.length > 0 && (
-          <section className="mt-8 sm:mt-12">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <section className="mt-6 sm:mt-8">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold bg-gradient-to-r from-primary/80 to-secondary/80 bg-clip-text text-transparent">
                 You May Also Like
               </h2>
@@ -781,7 +849,7 @@ export default function WallpaperPage() {
               </Button>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {suggestedWallpapers.map((item) => (
                 <Link 
                   href={`/wallpapers/${item.slug || item.id}`}
