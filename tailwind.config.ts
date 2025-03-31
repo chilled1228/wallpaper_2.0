@@ -81,6 +81,18 @@ const config: Config = {
         'pulse-slow': {
           '0%, 100%': { opacity: '0.3' },
           '50%': { opacity: '0.1' },
+        },
+        'fadeIn': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
+        },
+        'fadeIn-fast': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
+        },
+        'fadeIn-light': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
         }
       },
       animation: {
@@ -88,6 +100,9 @@ const config: Config = {
         'float-slower': 'float-slower 12s ease-in-out infinite',
         'gradient': 'gradient 15s ease infinite',
         'pulse-slow': 'pulse-slow 20s ease-in-out infinite',
+        'fadeIn': 'fadeIn 0.6s ease-out forwards',
+        'fadeIn-fast': 'fadeIn 0.3s ease-out forwards',
+        'fadeIn-light': 'fadeInLight 0.2s ease-out forwards',
       },
       backgroundSize: {
         'gradient-size': '200% 200%',

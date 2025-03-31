@@ -1,13 +1,12 @@
 import { Metadata } from 'next'
 import { defaultMetadata } from './metadata'
 import { Suspense } from "react"
-import { Loader2, ChevronRight, Download, ArrowRight, SearchIcon, Flame, SparklesIcon, HeartIcon, TrendingUpIcon, ImageIcon } from 'lucide-react'
+import { Loader2, ChevronRight, Download, ArrowRight, SparklesIcon } from 'lucide-react'
 import { WallpaperGrid } from '@/components/wallpaper-grid'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { db } from '@/lib/firebase'
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore'
-import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { ServerImage } from '@/components/ui/server-image'
 
@@ -354,9 +353,9 @@ export default async function HomePage() {
   
   return (
     <div className="w-full bg-gradient-to-b from-background via-background/95 to-background/90">
-      {/* Hero Section - Enhanced */}
-      <section className="relative w-full overflow-hidden mb-12 sm:mb-16 md:mb-20 py-10 md:py-16">
-        {/* Background decorative elements */}
+      {/* Hero Section - Optimized with minimal animations */}
+      <section className="relative w-full overflow-hidden mb-8 sm:mb-12 md:mb-16 py-10 md:py-16">
+        {/* Simpler, lighter background decorations */}
         <div className="absolute inset-0 -z-10">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-70"></div>
           <div className="absolute top-1/2 -left-24 w-72 h-72 bg-secondary/10 rounded-full blur-3xl opacity-70"></div>
@@ -383,30 +382,8 @@ export default async function HomePage() {
                 </p>
               </div>
               
-              {/* Search Bar */}
-              <div className="relative max-w-md">
-                <div className="relative">
-                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type="text" 
-                    placeholder="Search for wallpapers..." 
-                    className="pl-10 pr-20 h-12 rounded-full border-primary/20 focus:border-primary shadow-sm"
-                  />
-                  <Button size="sm" className="absolute right-1 top-1/2 transform -translate-y-1/2 rounded-full px-4 h-10">
-                    Search
-                  </Button>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span>Popular:</span>
-                  <Link href="/search?q=mountain" className="hover:text-primary transition-colors">Mountain</Link>
-                  <Link href="/search?q=ocean" className="hover:text-primary transition-colors">Ocean</Link>
-                  <Link href="/search?q=minimal" className="hover:text-primary transition-colors">Minimal</Link>
-                  <Link href="/search?q=space" className="hover:text-primary transition-colors">Space</Link>
-                </div>
-              </div>
-              
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button asChild size="lg" className="rounded-full">
+                <Button asChild size="lg" className="rounded-full shadow-sm">
                   <Link href="#explore">
                     Explore Collection <ChevronRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -424,7 +401,7 @@ export default async function HomePage() {
               </div>
             </div>
             
-            {/* Featured Image Side */}
+            {/* Featured Image Side - Improved performance */}
             <div className="relative mt-8 lg:mt-0">
               <div className="relative aspect-[5/4] md:aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 border border-primary/10">
                 <ServerImage
@@ -435,7 +412,7 @@ export default async function HomePage() {
                   className="object-cover"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   priority={true}
-                  quality={85}
+                  quality={90}
                   placeholder="blur"
                   blurDataURL={blurDataURL}
                 />
@@ -457,7 +434,7 @@ export default async function HomePage() {
                 )}
               </div>
               
-              {/* Stats overlay */}
+              {/* Stats overlay - simplified */}
               <div className="absolute -bottom-5 -right-5 md:-bottom-8 md:-right-8 bg-background/80 backdrop-blur-xl rounded-2xl p-4 md:p-6 shadow-lg border border-primary/10">
                 <div className="flex gap-4 md:gap-6">
                   <div className="text-center">
@@ -479,149 +456,66 @@ export default async function HomePage() {
         </div>
       </section>
       
-      {/* Categories Section - Enhanced */}
-      <section className="w-full py-16 mb-16">
+      {/* Explore Section - Optimized */}
+      <section id="explore" className="w-full py-12 sm:py-16">
         <div className="container px-4 sm:px-6 mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 sm:mb-10">
             <div>
-              <h2 className="text-3xl font-bold">Popular Categories</h2>
-              <p className="text-muted-foreground mt-2">Browse wallpapers by your favorite themes</p>
+              <h2 className="text-3xl font-bold">Explore Wallpapers</h2>
+              <p className="text-muted-foreground mt-2">Discover our collection of high-quality wallpapers</p>
             </div>
             <Button variant="outline" asChild className="group rounded-full">
-              <Link href="/categories">
-                View All Categories <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              <Link href="/latest">
+                View All <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </Button>
           </div>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
-            {popularCategories.map((category) => (
-              <Link href={`/category/${category.name.toLowerCase()}`} key={category.name}>
-                <div className="group relative overflow-hidden rounded-xl">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-80 group-hover:opacity-90 transition-opacity duration-300`}></div>
-                  <div className="relative p-6 md:p-8 h-40 flex flex-col justify-between">
-                    <span className="text-2xl">{category.icon}</span>
-                    <div>
-                      <h3 className="text-white font-medium text-lg">{category.name}</h3>
-                      <p className="text-white/90 text-sm mt-1 flex items-center">
-                        <ImageIcon className="h-3 w-3 mr-1 inline-block" /> 
-                        {category.count} wallpapers
-                      </p>
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-white/25 rounded-xl transition-all duration-300"></div>
+          <div className="relative">
+            <Suspense fallback={
+              <div className="flex items-center justify-center min-h-[600px] w-full">
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  <p className="text-muted-foreground text-sm">Loading wallpapers...</p>
                 </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-      
-      {/* Trending Section - Updated with Dynamic Content */}
-      <section className="w-full py-12 mb-16 bg-muted/30">
-        <div className="container px-4 sm:px-6 mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUpIcon className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium text-primary">Trending now</span>
               </div>
-              <h2 className="text-3xl font-bold">Most Popular This Week</h2>
-            </div>
-            <Button variant="outline" asChild className="group rounded-full">
-              <Link href="/trending">
-                View All Trending <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+            }>
+              <div className="min-h-[600px]">
+                <WallpaperGrid />
+              </div>
+            </Suspense>
+          </div>
+          
+          <div className="flex justify-center mt-10">
+            <Button asChild size="lg" className="rounded-full">
+              <Link href="/latest">
+                View More Wallpapers <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {/* Feature larger trending wallpaper */}
-            <div className="md:col-span-2 group relative aspect-[4/3] md:aspect-square rounded-xl overflow-hidden shadow-lg">
-              <ServerImage
-                src={getWallpaperImage(trendingWallpapers[0], '/trending-wallpaper-1.jpg')}
-                alt={trendingWallpapers[0].title}
-                fallbackSrc="/trending-wallpaper-1.jpg"
-                fill={true}
-                className="object-cover transition-transform duration-500 group-hover:scale-110"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                quality={75}
-                loading="lazy"
-                placeholder="blur"
-                blurDataURL={blurDataURL}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80"></div>
-              <div className="absolute top-4 left-4 flex items-center gap-2">
-                <span className="px-3 py-1 bg-white/90 text-black text-xs font-medium rounded-full">{trendingWallpapers[0].trending}</span>
-                <span className="flex items-center gap-1 px-3 py-1 bg-black/50 text-white text-xs font-medium rounded-full">
-                  <HeartIcon className="h-3 w-3" /> {trendingWallpapers[0].likes}
-                </span>
-              </div>
-              <div className="absolute bottom-4 left-4 right-4">
-                <h3 className="text-white font-medium text-lg">{trendingWallpapers[0].title}</h3>
-                <p className="text-white/80 text-sm mt-1">{trendingWallpapers[0].description}</p>
-              </div>
-              <Link 
-                href={`/wallpapers/${trendingWallpapers[0].slug}`} 
-                className="absolute inset-0 z-10"
-                aria-label={`View ${trendingWallpapers[0].title} wallpaper`} 
-              />
-            </div>
-            
-            {/* Three smaller trending wallpapers */}
-            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 md:grid-rows-2 gap-4 md:gap-6">
-              {trendingWallpapers.slice(1, 4).map((item: TrendingWallpaper, i: number) => (
-                <div key={i} className={`group relative ${i === 2 ? 'sm:col-span-2 md:col-span-1' : ''} aspect-video md:aspect-square rounded-xl overflow-hidden shadow-lg`}>
-                  <ServerImage
-                    src={getWallpaperImage(item, `/trending-wallpaper-${i+2}.jpg`)}
-                    alt={item.title}
-                    fallbackSrc={`/trending-wallpaper-${i+2}.jpg`}
-                    fill={true}
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
-                    quality={75}
-                    loading="lazy"
-                    placeholder="blur"
-                    blurDataURL={blurDataURL}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80"></div>
-                  <div className="absolute top-3 left-3 flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-white/90 text-black text-xs font-medium rounded-full">{item.trending}</span>
-                    <span className="flex items-center gap-1 px-2 py-0.5 bg-black/50 text-white text-xs font-medium rounded-full">
-                      <HeartIcon className="h-2.5 w-2.5" /> {item.likes}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <h3 className="text-white font-medium">{item.title}</h3>
-                    <p className="text-white/80 text-xs mt-1">{item.description}</p>
-                  </div>
-                  <Link 
-                    href={`/wallpapers/${item.slug}`}
-                    className="absolute inset-0 z-10"
-                    aria-label={`View ${item.title} wallpaper`} 
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
       
-      {/* Collections Section - Updated */}
-      <section className="w-full py-12 mb-16">
+      {/* Curated Collections - Optimized for performance */}
+      <section className="w-full py-12 sm:py-16 bg-muted/30">
         <div className="container px-4 sm:px-6 mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 sm:mb-10">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Flame className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium text-primary">Handpicked for you</span>
+                <SparklesIcon className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium text-primary">Hand-picked</span>
               </div>
               <h2 className="text-3xl font-bold">Curated Collections</h2>
-              <p className="text-muted-foreground mt-2">Discover themed wallpaper sets for every mood and occasion</p>
+              <p className="text-muted-foreground mt-2">Themed wallpaper sets for every mood and style</p>
             </div>
+            <Button variant="outline" asChild className="group rounded-full">
+              <Link href="/collections">
+                View All Collections <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </Button>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {curatedCollections.map((collection, i) => (
               <Link href={`/collections/${collection.slug}`} key={i}>
                 <div className="group relative aspect-[3/2] rounded-xl overflow-hidden shadow-lg">
@@ -638,97 +532,13 @@ export default async function HomePage() {
                     blurDataURL={blurDataURL}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80"></div>
-                  <div className="absolute bottom-5 left-5 right-5">
-                    <h3 className="text-white font-medium text-xl">{collection.title}</h3>
-                    <p className="text-white/80 text-sm mt-1">{collection.count}</p>
-                    <Button variant="outline" size="sm" className="mt-4 border-white/30 text-white hover:bg-white/20 rounded-full">
-                      View Collection
-                    </Button>
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <h3 className="text-white font-medium text-lg">{collection.title}</h3>
+                    <p className="text-white/80 text-sm mt-1">{collection.count} wallpapers</p>
                   </div>
                 </div>
               </Link>
             ))}
-          </div>
-        </div>
-      </section>
-      
-      {/* Recent Wallpapers - Full Width */}
-      <section id="explore" className="w-full py-12 mb-16">
-        <div className="container px-4 sm:px-6 mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
-            <div>
-              <h2 className="text-3xl font-bold">Latest Wallpapers</h2>
-              <p className="text-muted-foreground mt-2">Fresh and new additions to our collection</p>
-            </div>
-            <Button variant="outline" asChild className="group rounded-full">
-              <Link href="/latest">
-                View All Latest <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            </Button>
-          </div>
-          
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-[300px]">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          }>
-            <WallpaperGrid />
-          </Suspense>
-        </div>
-      </section>
-      
-      {/* Newsletter/Download App CTA - Enhanced */}
-      <section className="w-full py-8 mb-16">
-        <div className="container px-4 sm:px-6 mx-auto">
-          <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/10 backdrop-blur-xl rounded-2xl border border-primary/10 p-8 md:p-12 shadow-lg">
-            {/* Background elements */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute -top-24 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl"></div>
-            </div>
-            
-            <div className="relative grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold">Get Premium Wallpapers</h2>
-                <p className="text-muted-foreground max-w-md">
-                  Subscribe to our newsletter for exclusive wallpapers, early access to new collections, and special updates.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 mt-2">
-                  <div className="flex-1">
-                    <Input 
-                      type="email" 
-                      placeholder="Enter your email" 
-                      className="h-12 rounded-full border-primary/20"
-                    />
-                  </div>
-                  <Button className="h-12 rounded-full px-6">
-                    Subscribe Now
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  By subscribing, you agree to our privacy policy. We'll never spam you.
-                </p>
-              </div>
-              
-              <div className="relative h-60 md:h-72 -mb-8 md:mb-0">
-                <div className="absolute inset-y-0 right-0 w-full md:w-[120%] h-full">
-                  <div className="relative h-full w-full">
-                    <ServerImage
-                      src="/devices-mockup.png"
-                      alt="Our wallpapers on multiple devices"
-                      fallbackSrc="/devices-generic.png"
-                      fill
-                      className="object-contain object-bottom"
-                      loading="lazy"
-                      quality={75}
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                      placeholder="blur"
-                      blurDataURL={blurDataURL}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>

@@ -1,6 +1,24 @@
 import Image from 'next/image';
 import { forwardRef } from 'react';
 
+// Function to sanitize URLs with minimal operations
+function sanitizeR2Url(url: string): string {
+  if (!url || typeof url !== 'string') return '';
+  
+  // Handle local paths directly
+  if (url.startsWith('/')) return url;
+  
+  // Quick check for properly formed URLs
+  if (url.startsWith('https://')) return url;
+  
+  // Fix common R2 URL issues
+  if ((url.includes('.r2.dev') || url.includes('cloudflarestorage')) && !url.startsWith('http')) {
+    return `https://${url}`;
+  }
+  
+  return url;
+}
+
 interface ServerImageProps {
   src: string;
   alt: string;
@@ -15,23 +33,6 @@ interface ServerImageProps {
   loading?: 'eager' | 'lazy';
   placeholder?: 'blur' | 'empty';
   blurDataURL?: string;
-}
-
-// Helper function to sanitize R2 URLs
-function sanitizeR2Url(url: string): string {
-  if (!url) return url;
-  
-  // Handle the case where URL might be missing protocol for R2
-  if (url.startsWith('pub-') && url.includes('.r2.dev')) {
-    return `https://${url}`;
-  }
-  
-  // Ensure R2 URLs use HTTPS
-  if (url.includes('.r2.dev') && url.startsWith('http://')) {
-    return url.replace('http://', 'https://');
-  }
-  
-  return url;
 }
 
 export function ServerImage({
@@ -49,29 +50,39 @@ export function ServerImage({
   placeholder,
   blurDataURL,
 }: ServerImageProps) {
-  // Process the URL (safely server-side)
+  // Minimal processing - just enough to fix common issues
   const sanitizedSrc = sanitizeR2Url(src);
   
-  // Determine if we should use the fallback
-  const hasValidSrc = Boolean(sanitizedSrc) && (
+  // Only require basic validation
+  const hasValidSrc = sanitizedSrc && (
     sanitizedSrc.startsWith('/') || sanitizedSrc.startsWith('http')
   );
   
-  // Use either the sanitized source or fallback
+  // Use the fallback if no valid source
   const finalSrc = hasValidSrc ? sanitizedSrc : fallbackSrc;
   
-  // Common image properties
+  // Common image properties - optimized for performance
   const imageProps = {
     alt,
     className,
     priority,
     quality,
     loading: loading || (priority ? 'eager' : 'lazy'),
-    placeholder,
-    blurDataURL,
-    sizes,
+    sizes: sizes || '(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw',
+    decoding: 'async' as const,
   };
   
+  // Only include placeholder properties if provided
+  if (placeholder) {
+    // @ts-ignore - We're adding these conditionally
+    imageProps.placeholder = placeholder;
+    if (blurDataURL && placeholder === 'blur') {
+      // @ts-ignore
+      imageProps.blurDataURL = blurDataURL;
+    }
+  }
+  
+  // Optimized rendering path
   if (fill) {
     return (
       <Image
