@@ -57,6 +57,12 @@ export function Navbar() {
               Categories
             </Link>
             <Link 
+              href="/latest"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Latest
+            </Link>
+            <Link 
               href="/featured"
               className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -104,6 +110,13 @@ export function Navbar() {
                     onClick={closeSheet}
                   >
                     Categories
+                  </Link>
+                  <Link 
+                    href="/latest"
+                    className="text-base sm:text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={closeSheet}
+                  >
+                    Latest
                   </Link>
                   <Link 
                     href="/featured"
