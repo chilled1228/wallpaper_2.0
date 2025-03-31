@@ -41,7 +41,7 @@ function WallpaperCardSkeleton() {
       <div className="aspect-[3/4] relative bg-gradient-to-br from-background/80 to-muted/50 overflow-hidden">
         <div className="absolute inset-0 bg-muted/50" />
       </div>
-      <div className="p-4 space-y-3">
+      <div className="p-3 sm:p-4 space-y-3">
         <div className="w-24 h-5 rounded-full bg-muted/50" />
         <div className="space-y-2">
           <div className="h-4 w-3/4 bg-muted/50 rounded" />
@@ -440,7 +440,7 @@ export function WallpaperGrid() {
     }
     
     const options = {
-      rootMargin: '200px', // Load earlier but not too early
+      rootMargin: '400px', // Load even earlier to prevent seeing the loader
       threshold: 0.1
     }
     
@@ -576,9 +576,10 @@ export function WallpaperGrid() {
         </div>
       </div>
 
-      {/* Wallpapers Grid */}
-      <div className="w-full min-h-[500px]">
-        <div className="responsive-grid">
+      {/* Wallpapers Grid - Set minimum height to prevent layout shifts */}
+      <div className="w-full min-h-[800px]">
+        {/* Reserve grid space before content loads to prevent jumping */}
+        <div className="responsive-grid" style={{ minHeight: isLoading ? '800px' : undefined }}>
           {isLoading ? (
             <>
               {Array.from({ length: 12 }).map((_, index) => (
@@ -657,7 +658,7 @@ export function WallpaperGrid() {
               <div 
                 ref={observerTarget} 
                 className="col-span-full flex justify-center items-center h-16"
-                style={{ minHeight: isLoadingMore ? '80px' : '40px' }}
+                style={{ minHeight: '60px', margin: '20px 0' }}
               >
                 {isLoadingMore ? (
                   <div className="flex items-center justify-center h-16 px-4 py-2 bg-background/50 backdrop-blur-sm rounded-lg shadow-sm border border-primary/5">

@@ -471,16 +471,47 @@ export default async function HomePage() {
             </Button>
           </div>
           
-          <div className="relative">
+          <div className="relative min-h-[800px]">
             <Suspense fallback={
-              <div className="flex items-center justify-center min-h-[600px] w-full">
-                <div className="flex flex-col items-center gap-4">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                  <p className="text-muted-foreground text-sm">Loading wallpapers...</p>
+              <div className="flex flex-col min-h-[800px] w-full">
+                <div className="w-full max-w-3xl mx-auto mb-6 sm:mb-8 lg:mb-12">
+                  <div className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 shadow-sm p-4 md:p-6 min-h-[160px]">
+                    <div className="relative mb-5">
+                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 bg-muted-foreground/20 rounded-full" />
+                      <div className="h-10 sm:h-12 w-full bg-background/60 border border-primary/10 rounded-lg" />
+                    </div>
+                    <div className="flex justify-between items-center mt-4 mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 bg-primary/20 rounded-full" />
+                        <div className="h-4 w-32 bg-muted/30 rounded" />
+                      </div>
+                      <div className="h-4 w-24 bg-muted/30 rounded" />
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-3 min-h-[36px]">
+                      <div className="h-8 w-16 bg-primary/10 rounded-lg" />
+                      <div className="h-8 w-24 bg-muted/30 rounded-lg" />
+                      <div className="h-8 w-20 bg-muted/30 rounded-lg" />
+                      <div className="h-8 w-28 bg-muted/30 rounded-lg" />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="bg-background/60 backdrop-blur-xl border border-primary/10 shadow-sm rounded-xl overflow-hidden h-full">
+                      <div className="aspect-[3/4] relative bg-gradient-to-br from-background/80 to-muted/50" />
+                      <div className="p-3 sm:p-4 space-y-3">
+                        <div className="w-24 h-5 bg-muted/30 rounded-full" />
+                        <div className="space-y-2">
+                          <div className="h-4 w-3/4 bg-muted/30 rounded" />
+                          <div className="h-4 w-full bg-muted/30 rounded" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             }>
-              <div className="min-h-[600px]">
+              <div className="min-h-[800px]">
                 <WallpaperGrid />
               </div>
             </Suspense>
