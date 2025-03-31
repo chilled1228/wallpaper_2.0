@@ -65,9 +65,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const wallpaperRoutes = wallpapersSnapshot.docs.map((doc) => {
     const data = doc.data();
     const slug = data.slug || doc.id;
+    
+    // Ensure we have a valid date
+    let lastModified;
+    try {
+      if (data.updatedAt) {
+        lastModified = new Date(data.updatedAt);
+      } else if (data.createdAt) {
+        lastModified = new Date(data.createdAt);
+      } else {
+        lastModified = new Date();
+      }
+      
+      // Validate the date - if invalid, use current date
+      if (isNaN(lastModified.getTime())) {
+        lastModified = new Date();
+      }
+    } catch (e) {
+      lastModified = new Date();
+    }
+    
     return {
       url: `${baseUrl}/wallpapers/${slug}`,
-      lastModified: data.updatedAt ? new Date(data.updatedAt) : new Date(data.createdAt || Date.now()),
+      lastModified,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     };
@@ -77,9 +97,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const categoryRoutes = categoriesSnapshot.docs.map((doc) => {
     const data = doc.data();
     const slug = data.slug || doc.id;
+    
+    // Ensure we have a valid date
+    let lastModified;
+    try {
+      if (data.updatedAt) {
+        lastModified = new Date(data.updatedAt);
+      } else if (data.createdAt) {
+        lastModified = new Date(data.createdAt);
+      } else {
+        lastModified = new Date();
+      }
+      
+      // Validate the date - if invalid, use current date
+      if (isNaN(lastModified.getTime())) {
+        lastModified = new Date();
+      }
+    } catch (e) {
+      lastModified = new Date();
+    }
+    
     return {
       url: `${baseUrl}/categories/${slug}`,
-      lastModified: data.updatedAt ? new Date(data.updatedAt) : new Date(data.createdAt || Date.now()),
+      lastModified,
       changeFrequency: 'weekly' as const,
       priority: 0.7,
     };
@@ -89,9 +129,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogRoutes = blogsSnapshot.docs.map((doc) => {
     const data = doc.data();
     const slug = data.slug || doc.id;
+    
+    // Ensure we have a valid date
+    let lastModified;
+    try {
+      if (data.updatedAt) {
+        lastModified = new Date(data.updatedAt);
+      } else if (data.createdAt) {
+        lastModified = new Date(data.createdAt);
+      } else {
+        lastModified = new Date();
+      }
+      
+      // Validate the date - if invalid, use current date
+      if (isNaN(lastModified.getTime())) {
+        lastModified = new Date();
+      }
+    } catch (e) {
+      lastModified = new Date();
+    }
+    
     return {
       url: `${baseUrl}/blog/${slug}`,
-      lastModified: data.updatedAt ? new Date(data.updatedAt) : new Date(data.createdAt || Date.now()),
+      lastModified,
       changeFrequency: 'weekly' as const,
       priority: 0.7,
     };
