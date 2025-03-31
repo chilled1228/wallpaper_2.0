@@ -6,12 +6,12 @@ import { collection, query, getDocs, orderBy, limit, where } from 'firebase/fire
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Search, Download, Heart, Filter } from 'lucide-react'
-import NextImage from 'next/image'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useDebounce } from 'use-debounce'
+import { ServerImage } from '@/components/ui/server-image'
 
 interface Wallpaper {
   id: string
@@ -31,6 +31,7 @@ interface Wallpaper {
   createdBy?: string
   updatedAt?: string
   version?: number
+  tags?: string[]
 }
 
 function WallpaperCardSkeleton() {
@@ -50,6 +51,128 @@ function WallpaperCardSkeleton() {
   )
 }
 
+// Shared blur data URL for low-quality placeholder
+const blurDataURL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+";
+
+// For TypeScript to recognize custom window properties
+declare global {
+  interface Window {
+    hasLoggedR2Domain?: boolean;
+  }
+}
+
+// Helper function to determine if an image URL is from R2
+function isR2Image(url: string): boolean {
+  if (!url) return false;
+  
+  // Check if URL contains R2 public domain or cloudflare domains
+  const r2PublicDomain = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_DOMAIN;
+  
+  // Log once for debugging - only in browser
+  if (typeof window !== 'undefined') {
+    if (!window.hasLoggedR2Domain) {
+      console.log('R2 public domain config:', r2PublicDomain);
+      window.hasLoggedR2Domain = true;
+    }
+  }
+  
+  // Common R2 patterns
+  const isR2Pattern = 
+    url.includes('.r2.dev') || 
+    url.includes('.cloudflarestorage.com') ||
+    url.includes('cloudflare') ||
+    (typeof r2PublicDomain === 'string' && url.includes(r2PublicDomain));
+  
+  if (isR2Pattern) {
+    console.log('Detected R2 image:', url);
+  }
+  
+  return isR2Pattern;
+}
+
+// Helper function to validate URL
+function isValidImageUrl(url: string): boolean {
+  if (!url) return false;
+  
+  // Handle local file paths that start with '/'
+  if (url.startsWith('/')) {
+    return true;
+  }
+  
+  // Handle external URLs
+  try {
+    new URL(url);
+    return url.startsWith('http://') || url.startsWith('https://');
+  } catch {
+    return false;
+  }
+}
+
+// Helper function to get fallback image based on category or tags
+function getFallbackImage(wallpaper: Wallpaper): string {
+  const category = wallpaper.category?.toLowerCase() || '';
+  const tags = wallpaper.tags || [];
+  const title = wallpaper.title?.toLowerCase() || '';
+  const description = wallpaper.description?.toLowerCase() || '';
+  
+  // Map categories/keywords to image paths
+  const imageMap: Record<string, string> = {
+    nature: '/category-nature.jpg',
+    landscape: '/category-landscape.jpg',
+    abstract: '/category-abstract.jpg',
+    minimal: '/category-minimal.jpg',
+    dark: '/category-dark.jpg',
+    city: '/category-city.jpg',
+    space: '/category-space.jpg',
+    technology: '/category-tech.jpg',
+    art: '/category-art.jpg',
+    gradient: '/category-gradient.jpg',
+  };
+  
+  // Check category first
+  if (category && imageMap[category]) {
+    return imageMap[category];
+  }
+  
+  // Check tags next
+  if (Array.isArray(tags)) {
+    for (const tag of tags) {
+      const tagLower = typeof tag === 'string' ? tag.toLowerCase() : '';
+      if (tagLower && imageMap[tagLower]) {
+        return imageMap[tagLower];
+      }
+    }
+  }
+  
+  // Check keywords in title and description
+  for (const keyword of Object.keys(imageMap)) {
+    if (title.includes(keyword) || description.includes(keyword)) {
+      return imageMap[keyword];
+    }
+  }
+  
+  // Default fallback
+  return '/default-wallpaper.jpg';
+}
+
+// Helper function to sanitize R2 URLs if needed
+function sanitizeR2Url(url: string): string {
+  if (!url) return url;
+  
+  // Handle the case where URL might be missing protocol for R2
+  if (url.startsWith('pub-') && url.includes('.r2.dev')) {
+    console.log('Adding protocol to R2 URL:', url);
+    return `https://${url}`;
+  }
+  
+  // Ensure R2 URLs use HTTPS
+  if (url.includes('.r2.dev') && url.startsWith('http://')) {
+    return url.replace('http://', 'https://');
+  }
+  
+  return url;
+}
+
 export function WallpaperGrid() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery] = useDebounce(searchQuery, 300)
@@ -58,6 +181,7 @@ export function WallpaperGrid() {
   const [categories, setCategories] = useState<string[]>([])
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [indexError, setIndexError] = useState<string | null>(null)
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
   
   // Fetch wallpapers from Firestore
   useEffect(() => {
@@ -111,9 +235,32 @@ export function WallpaperGrid() {
           const shouldInclude = !indexError || data.isPublic !== false
           
           if (shouldInclude) {
+            // Validate and sanitize imageUrl
+            let imageUrl = data.imageUrl || '';
+            
+            // If URL is empty or invalid (and not a local path), use fallback
+            try {
+              if (imageUrl && !imageUrl.startsWith('/')) {
+                new URL(imageUrl); // This will throw for invalid URLs
+              }
+            } catch (e) {
+              // If URL is invalid, log it and use a category-based fallback
+              console.warn(`Invalid image URL for wallpaper ${doc.id}: ${imageUrl}`);
+              const category = (data.category || '').toLowerCase();
+              if (category && ['nature', 'landscape', 'abstract', 'minimal', 'dark', 'city', 'space', 'technology', 'art', 'gradient'].includes(category)) {
+                imageUrl = `/category-${category === 'technology' ? 'tech' : category}.jpg`;
+              } else {
+                imageUrl = '/default-wallpaper.jpg';
+              }
+            }
+            
+            // Log successful URL for debugging
+            console.log(`Wallpaper ${doc.id} using image: ${imageUrl}`);
+            
             wallpapersList.push({
               id: doc.id,
-              ...data
+              ...data,
+              imageUrl
             })
             
             if (data.category) {
@@ -134,6 +281,15 @@ export function WallpaperGrid() {
     
     fetchWallpapers()
   }, [])
+  
+  // Handle image errors
+  const handleImageError = (wallpaperId: string) => {
+    setImageErrors(prev => ({
+      ...prev,
+      [wallpaperId]: true
+    }));
+    console.log(`Image error for wallpaper ${wallpaperId}`);
+  };
 
   const filteredWallpapers = useMemo(() => {
     console.log('Filtering wallpapers:', wallpapers.length);
@@ -231,7 +387,7 @@ export function WallpaperGrid() {
               ))}
             </>
           ) : filteredWallpapers.length > 0 ? (
-            filteredWallpapers.map((wallpaper) => (
+            filteredWallpapers.map((wallpaper, index) => (
               <Link
                 key={wallpaper.slug || wallpaper.id}
                 href={`/wallpapers/${wallpaper.slug || wallpaper.id}`}
@@ -240,21 +396,18 @@ export function WallpaperGrid() {
                 <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-background/60 backdrop-blur-xl border-primary/10 rounded-xl h-full flex flex-col">
                   <div className="relative aspect-[3/4] overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    {wallpaper.imageUrl ? (
-                      <NextImage
-                        src={wallpaper.imageUrl}
-                        alt={wallpaper.title || 'Wallpaper'}
-                        fill={true}
-                        className="object-cover transition-all duration-500 group-hover:scale-110"
-                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                        priority={false}
-                        loading="lazy"
-                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
-                        placeholder="blur"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-muted/30" />
-                    )}
+                    <ServerImage
+                      src={sanitizeR2Url(wallpaper.imageUrl)}
+                      alt={wallpaper.title || 'Wallpaper'}
+                      fallbackSrc={getFallbackImage(wallpaper)}
+                      fill={true}
+                      className="object-cover transition-all duration-500 group-hover:scale-110"
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      priority={index < 4}
+                      quality={75}
+                      placeholder="blur"
+                      blurDataURL={blurDataURL}
+                    />
                     <div className="absolute top-3 right-3 z-20">
                       <Badge variant="secondary" className="bg-primary/80 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs">
                         {wallpaper.category || 'Uncategorized'}

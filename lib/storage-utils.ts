@@ -1,21 +1,29 @@
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, UploadResult } from 'firebase/storage';
-import { uploadToR2, isR2Path } from './r2-storage-utils';
+import { uploadToR2, generateR2Path } from './cloudflare-r2';
+
+// Define content types that should use R2 storage
+const R2_FOLDER_PREFIXES = ['wallpaper-images', 'wallpapers', 'prompt-images'];
 
 /**
- * Uploads an image to Firebase Storage and returns the download URL
+ * Checks if the given path should use R2 storage
+ * @param path The storage path
+ * @returns boolean indicating if R2 should be used
+ */
+function shouldUseR2(path: string): boolean {
+  // Determine if this path matches any R2 folder prefixes
+  return R2_FOLDER_PREFIXES.some(prefix => path.startsWith(prefix));
+}
+
+/**
+ * Uploads an image to the appropriate storage system (Firebase or R2)
+ * and returns the download URL
  * @param file The file to upload
  * @param path The storage path where the file should be stored
  * @returns Promise<string> The download URL for the uploaded image
  */
 export async function uploadImage(file: File, path: string): Promise<string> {
   try {
-    // Check if this should go to R2
-    if (isR2Path(path)) {
-      return await uploadToR2(file, path);
-    }
-
-    // If not R2, use Firebase Storage
     // Validate file
     if (!file) {
       throw new Error('No file provided for upload');
@@ -33,7 +41,14 @@ export async function uploadImage(file: File, path: string): Promise<string> {
       throw new Error(`File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum size: 10MB`);
     }
     
-    console.log(`Uploading image: name=${file.name}, type=${file.type}, size=${(file.size / 1024).toFixed(2)}KB to path=${path}`);
+    // Check if this path should use R2
+    if (shouldUseR2(path)) {
+      console.log(`Using Cloudflare R2 for upload to path: ${path}`);
+      return uploadToR2(file, path, file.type);
+    }
+    
+    // Otherwise use Firebase Storage
+    console.log(`Using Firebase Storage for upload: name=${file.name}, type=${file.type}, size=${(file.size / 1024).toFixed(2)}KB to path=${path}`);
     
     // Create a storage reference
     const storageRef = ref(storage, path);
@@ -56,7 +71,7 @@ export async function uploadImage(file: File, path: string): Promise<string> {
     } catch (uploadError: any) {
       console.error('Upload failed:', uploadError);
       if (uploadError.code === 'storage/unauthorized') {
-        throw new Error('Upload failed: You do not have permission to upload files');
+        throw new Error('Upload permission denied');
       } else if (uploadError.code === 'storage/canceled') {
         throw new Error('Upload was canceled');
       } else if (uploadError.code === 'storage/unknown') {
@@ -89,14 +104,18 @@ export async function uploadImage(file: File, path: string): Promise<string> {
  * @returns A unique path including timestamp and sanitized filename
  */
 export function generateStoragePath(folder: string, fileName: string): string {
-  // Sanitize file name to remove any potential problematic characters
-  const sanitizedName = fileName
-    .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace any non-alphanumeric char with underscore
-    .toLowerCase();
-    
-  // Generate a unique file name with timestamp to avoid collisions
-  const timestamp = Date.now();
-  const uniqueFileName = `${timestamp}-${sanitizedName}`;
+  // Check if this folder should use R2
+  if (shouldUseR2(folder)) {
+    return generateR2Path(folder, fileName);
+  }
   
-  return `${folder}/${uniqueFileName}`;
+  // Sanitize the filename
+  const sanitizedName = fileName.replace(/[^a-zA-Z0-9-.]/g, '_');
+  
+  // Create a unique timestamp-based prefix
+  const timestamp = Date.now();
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  
+  // Return full path
+  return `${folder}/${timestamp}-${randomSuffix}-${sanitizedName}`;
 } 

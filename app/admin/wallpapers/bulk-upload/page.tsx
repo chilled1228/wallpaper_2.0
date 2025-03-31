@@ -7,6 +7,7 @@ import { collection, addDoc, Timestamp, doc, getDoc, getDocs, setDoc, serverTime
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { useDropzone } from 'react-dropzone';
+import { uploadImage, generateStoragePath } from '@/lib/storage-utils';
 import { 
   Card, 
   CardContent, 
@@ -354,6 +355,8 @@ export default function BulkUploadPage() {
   const [unpublishedUploads, setUnpublishedUploads] = useState<{ fileId: string; downloadURL: string }[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishProgress, setPublishProgress] = useState(0);
+  // Keep track of active uploads with AbortController signals
+  const [activeUploads, setActiveUploads] = useState(new Map<string, { signal: AbortController; interval?: NodeJS.Timeout }>());
   
   // Function to fetch categories from Firestore
   useEffect(() => {
@@ -668,55 +671,62 @@ export default function BulkUploadPage() {
     });
   };
 
+  // Cancel all uploads
   const cancelAllUploads = useCallback(() => {
-    // Set upload canceled flag
-    setIsUploadCanceled(true);
-    
-    // Cancel all active upload tasks
-    activeUploadTasks.forEach((uploadTask, fileId) => {
-      if (uploadTask) {
-        try {
-          uploadTask.cancel();
-        } catch (error) {
-          console.error(`Error canceling upload for file ${fileId}:`, error);
-        }
-      }
-    });
-    
-    // Clear the active tasks map
-    setActiveUploadTasks(new Map());
-    
-    // Update file statuses for all uploading files
-    setFiles(prev => prev.map(f => 
-      f.status === 'uploading' ? { ...f, status: 'error', error: 'Upload canceled', isCanceled: true } : f
-    ));
-    
-    // Reset upload state
-    setIsUploading(false);
-    
-    toast({
-      title: "Upload canceled",
-      description: "All uploads have been canceled",
-      variant: "default",
-    });
-  }, [activeUploadTasks]);
-  
-  const cancelUpload = useCallback((fileId: string) => {
-    const uploadTask = activeUploadTasks.get(fileId);
-    
-    if (uploadTask) {
+    // Cancel each active upload
+    activeUploads.forEach((uploadData, fileId) => {
       try {
-        // Cancel the Firebase upload task
-        uploadTask.cancel();
+        // Abort the upload if possible
+        uploadData.signal.abort();
         
-        // Remove from active tasks
-        const newTasks = new Map(activeUploadTasks);
-        newTasks.delete(fileId);
-        setActiveUploadTasks(newTasks);
+        // Clear the progress interval if it exists
+        if (uploadData.interval) {
+          clearInterval(uploadData.interval);
+        }
         
         // Update file status
         setFiles(prev => prev.map(f => 
-          f.id === fileId ? { ...f, status: 'error', error: 'Upload canceled', isCanceled: true } : f
+          f.id === fileId ? { ...f, status: 'error', error: 'Upload canceled', isCanceled: true, progress: 0 } : f
+        ));
+      } catch (error) {
+        console.error(`Error canceling upload for file ${fileId}:`, error);
+      }
+    });
+    
+    // Clear all active uploads
+    setActiveUploads(new Map());
+    setIsUploadCanceled(true);
+    setIsUploading(false);
+    
+    toast({
+      title: "Uploads canceled",
+      description: "All uploads have been canceled",
+      variant: "default",
+    });
+  }, [activeUploads]);
+  
+  // Cancel a single upload
+  const cancelUpload = useCallback((fileId: string) => {
+    const uploadData = activeUploads.get(fileId);
+    
+    if (uploadData) {
+      try {
+        // Abort the upload if possible
+        uploadData.signal.abort();
+        
+        // Clear the progress interval if it exists
+        if (uploadData.interval) {
+          clearInterval(uploadData.interval);
+        }
+        
+        // Remove from active uploads
+        const newUploads = new Map(activeUploads);
+        newUploads.delete(fileId);
+        setActiveUploads(newUploads);
+        
+        // Update file status
+        setFiles(prev => prev.map(f => 
+          f.id === fileId ? { ...f, status: 'error', error: 'Upload canceled', isCanceled: true, progress: 0 } : f
         ));
         
         toast({
@@ -728,7 +738,7 @@ export default function BulkUploadPage() {
         console.error(`Error canceling upload for file ${fileId}:`, error);
       }
     }
-  }, [activeUploadTasks]);
+  }, [activeUploads]);
   
   const retryUpload = useCallback(async (fileId: string) => {
     const fileToRetry = files.find(f => f.id === fileId);
@@ -808,56 +818,94 @@ export default function BulkUploadPage() {
   const uploadWallpaper = async (fileData: UploadFile): Promise<string> => {
     return new Promise(async (resolve, reject) => {
       try {
+        // Create an AbortController for this upload
+        const abortController = new AbortController();
+        
         // Generate a unique filename with timestamp to avoid overwrites
         const timestamp = Date.now();
-        const fileExtension = fileData.file.name.split('.').pop() || 'jpeg';
         const filename = `${fileData.id}-${timestamp}-${fileData.file.name}`;
         
-        // Create storage reference
-        const storageRef = ref(storage, `wallpapers/${filename}`);
+        // Generate path using the storage utility that will determine to use R2 or Firebase
+        const path = generateStoragePath('wallpapers', filename);
         
-        // Create upload task
-        const uploadTask = uploadBytesResumable(storageRef, fileData.file);
-        
-        // Store the upload task reference in the file data for potential cancellation
+        // Set initial progress
         setFiles(prev => prev.map(f => 
-          f.id === fileData.id ? { ...f, uploadTask } : f
+          f.id === fileData.id ? { ...f, status: 'uploading', progress: 0 } : f
         ));
         
-        // Listen for state changes
-        uploadTask.on(
-          'state_changed',
-          // Progress callback
-          (snapshot) => {
-            const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-            // Update file progress
-            setFiles(prev => prev.map(f => 
-              f.id === fileData.id ? { ...f, progress } : f
-            ));
-          },
-          // Error callback
-          (error) => {
-            console.error('Upload error:', error);
-            reject(error);
-          },
-          // Success callback
-          async () => {
-            try {
-              // Get download URL
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              
-              // Remove the upload task reference since it's complete
-              setFiles(prev => prev.map(f => 
-                f.id === fileData.id ? { ...f, uploadTask: undefined } : f
-              ));
-              
-              resolve(downloadURL);
-            } catch (error) {
-              console.error('Error getting download URL:', error);
-              reject(error);
-            }
+        // Create a progress interval to simulate upload progress
+        // This is needed because the uploadImage function doesn't provide progress updates
+        let progressValue = 0;
+        const progressInterval = setInterval(() => {
+          // Check if the upload has been aborted
+          if (abortController.signal.aborted) {
+            clearInterval(progressInterval);
+            return;
           }
-        );
+          
+          progressValue += Math.random() * 5; // Random increment between 0-5%
+          if (progressValue > 90) progressValue = 90; // Cap at 90% until complete
+          
+          const progress = Math.round(progressValue);
+          // Update file progress
+          setFiles(prev => prev.map(f => 
+            f.id === fileData.id ? { ...f, progress } : f
+          ));
+        }, 300);
+        
+        // Add this upload to the active uploads map
+        setActiveUploads(prev => {
+          const newMap = new Map(prev);
+          newMap.set(fileData.id, { 
+            signal: abortController,
+            interval: progressInterval
+          });
+          return newMap;
+        });
+        
+        try {
+          // Check if the upload has been aborted
+          if (abortController.signal.aborted) {
+            throw new Error('Upload canceled');
+          }
+          
+          // Log which storage system will be used
+          console.log(`Uploading file ${fileData.file.name} to storage path: ${path}`);
+          
+          // Upload using storage utility that automatically routes to R2 or Firebase
+          const downloadURL = await uploadImage(fileData.file, path);
+          
+          // Clear the progress interval
+          clearInterval(progressInterval);
+          
+          // Remove this upload from active uploads
+          setActiveUploads(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(fileData.id);
+            return newMap;
+          });
+          
+          // Set progress to 100% when complete
+          setFiles(prev => prev.map(f => 
+            f.id === fileData.id ? { ...f, progress: 100 } : f
+          ));
+          
+          console.log(`File ${fileData.file.name} uploaded successfully, download URL:`, downloadURL);
+          resolve(downloadURL);
+        } catch (error) {
+          // Clear the progress interval on error
+          clearInterval(progressInterval);
+          
+          // Remove this upload from active uploads
+          setActiveUploads(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(fileData.id);
+            return newMap;
+          });
+          
+          console.error('Error uploading file:', error);
+          reject(error);
+        }
       } catch (error) {
         console.error('Error setting up upload:', error);
         reject(error);
@@ -946,8 +994,8 @@ export default function BulkUploadPage() {
 
     // Only upload files that haven't been uploaded yet or had errors
     const filesToUpload = files.filter(f => f.status !== 'success' && !f.isCanceled);
-    const totalFiles = filesToUpload.length;
-    let completedFiles = 0;
+    const totalFilesCount = filesToUpload.length;
+    let completedFilesCount = 0;
 
     try {
       // Process one file at a time
@@ -964,7 +1012,7 @@ export default function BulkUploadPage() {
         
         try {
           // Upload single file
-          console.log(`Uploading file ${i+1}/${totalFiles}: ${fileData.file.name}`);
+          console.log(`Uploading file ${i+1}/${totalFilesCount}: ${fileData.file.name}`);
           const downloadURL = await uploadWallpaper(fileData);
           
           // Mark as success and add to unpublished uploads
@@ -987,8 +1035,8 @@ export default function BulkUploadPage() {
           }
           
           // Update progress
-          completedFiles++;
-          const progress = Math.round((completedFiles / totalFiles) * 100);
+          completedFilesCount++;
+          const progress = Math.round((completedFilesCount / totalFilesCount) * 100);
           setUploadProgress(progress);
           
           // Add a delay between uploads to prevent UI freezing and refresh issues
@@ -1008,10 +1056,10 @@ export default function BulkUploadPage() {
       }
       
       // Show success toast if uploads weren't canceled
-      if (!isUploadCanceled && completedFiles > 0) {
+      if (!isUploadCanceled && completedFilesCount > 0) {
         toast({
           title: 'Upload Complete',
-          description: `Successfully uploaded ${completedFiles} files to storage.`,
+          description: `Successfully uploaded ${completedFilesCount} files to storage.`,
         });
       }
     } catch (error) {

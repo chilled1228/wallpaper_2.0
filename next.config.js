@@ -4,6 +4,10 @@ const nextConfig = {
     domains: [
       'firebasestorage.googleapis.com',
       'lh3.googleusercontent.com', // For Google user profile images
+      'pub-ab54ca2d01df4886aa0c3f240ace806d.r2.dev', // R2 public domain
+      'ab54ca2d01df4886aa0c3f240ace806d.r2.cloudflarestorage.com', // R2 private domain
+      'r2.cloudflarestorage.com',
+      'r2.dev',
     ],
     unoptimized: process.env.NODE_ENV === 'development',
   },

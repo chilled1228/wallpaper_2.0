@@ -10,11 +10,16 @@
     "cleanup:storage": "npx tsx scripts/cleanup-storage.ts",
     "cleanup:firestore": "npx tsx scripts/cleanup-firestore.ts",
     "cleanup:all": "npx tsx scripts/cleanup-all.ts",
-    "cleanup:admin": "npx tsx scripts/cleanup-admin.ts"
+    "cleanup:admin": "npx tsx scripts/cleanup-admin.ts",
+    "migrate:to-r2": "node scripts/migrate-to-r2.js",
+    "r2:setup": "echo 'Follow the instructions in docs/cloudflare-r2-setup.md to set up Cloudflare R2'",
+    "ensure:fallbacks": "node utils/ensure-fallback-images.js",
+    "postinstall": "npm run ensure:fallbacks"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.7.4",
     "@aws-sdk/client-s3": "^3.777.0",
+    "@aws-sdk/lib-storage": "^3.777.0",
     "@aws-sdk/s3-request-presigner": "^3.777.0",
     "@clerk/nextjs": "^6.9.6",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -84,6 +89,8 @@
     "@types/react-dom": "^18",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.0.0",

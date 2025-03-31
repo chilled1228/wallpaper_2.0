@@ -5,14 +5,25 @@ import { Loader2, ChevronRight, Download, ArrowRight, SearchIcon, Flame, Sparkle
 import { WallpaperGrid } from '@/components/wallpaper-grid'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import NextImage from 'next/image'
 import { db } from '@/lib/firebase'
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { ServerImage } from '@/components/ui/server-image'
 
 // Generate metadata for SEO
 export const metadata: Metadata = defaultMetadata
+
+interface TrendingWallpaper {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  slug: string;
+  trending: string;
+  likes: string;
+  [key: string]: any;
+}
 
 async function getFeaturedWallpaper() {
   console.log('Starting to fetch featured wallpaper');
@@ -81,6 +92,152 @@ async function getFeaturedWallpaper() {
   }
 }
 
+// Get trending wallpapers
+async function getTrendingWallpapers(): Promise<TrendingWallpaper[]> {
+  try {
+    let snapshot;
+    
+    try {
+      // Try query with composite index first
+      const trendingQuery = query(
+        collection(db, 'wallpapers'),
+        where('isPublic', '==', true),
+        where('status', '==', 'active'),
+        orderBy('views', 'desc'),
+        limit(4)
+      );
+      
+      snapshot = await getDocs(trendingQuery);
+      console.log('Using indexed trending query successfully');
+    } catch (error: any) {
+      // If index error, fall back to simpler query
+      if (error.message && error.message.includes('index')) {
+        console.log('Falling back to simpler trending query due to missing index');
+        
+        // Simple query without complex filters that don't need composite index
+        const simpleQuery = query(
+          collection(db, 'wallpapers'),
+          where('isPublic', '==', true),
+          limit(8)
+        );
+        
+        snapshot = await getDocs(simpleQuery);
+        
+        // Sort client-side instead
+        const docs = snapshot.docs.filter(doc => doc.data().status === 'active');
+        docs.sort((a, b) => (b.data().views || 0) - (a.data().views || 0));
+        snapshot = {
+          docs: docs.slice(0, 4),
+          empty: docs.length === 0,
+          size: docs.length
+        } as any;
+      } else {
+        // Rethrow if not an index error
+        throw error;
+      }
+    }
+    
+    if (snapshot.empty) {
+      console.log('No trending wallpapers found, using defaults');
+      // Return default trending wallpapers
+      return [
+        { 
+          id: 'default-1', 
+          title: 'Mystical Mountain Lake', 
+          description: 'Serene landscape with vibrant colors',
+          imageUrl: '/trending-wallpaper-1.jpg',
+          slug: 'mystical-mountain-lake',
+          trending: '#1',
+          likes: '2.4k'
+        },
+        { 
+          id: 'default-2', 
+          title: 'Minimal Workspace', 
+          description: 'Clean and productive setup',
+          imageUrl: '/trending-wallpaper-2.jpg',
+          slug: 'minimal-workspace',
+          trending: '#2',
+          likes: '1.8k'
+        },
+        { 
+          id: 'default-3', 
+          title: 'Neon City Nights', 
+          description: 'Cyberpunk urban landscape',
+          imageUrl: '/trending-wallpaper-3.jpg',
+          slug: 'neon-city-nights',
+          trending: '#3',
+          likes: '1.5k'
+        },
+        { 
+          id: 'default-4', 
+          title: 'Ocean Sunrise', 
+          description: 'Beautiful morning at the beach',
+          imageUrl: '/trending-wallpaper-4.jpg',
+          slug: 'ocean-sunrise',
+          trending: '#4',
+          likes: '1.2k'
+        }
+      ];
+    }
+    
+    // Map Firestore documents to trending wallpapers
+    return snapshot.docs.map((doc: any, index: number) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        title: data.title || `Trending Wallpaper ${index + 1}`,
+        description: data.description || 'Beautiful high-resolution wallpaper',
+        imageUrl: data.imageUrl || `/trending-wallpaper-${index + 1}.jpg`,
+        slug: data.slug || doc.id,
+        trending: `#${index + 1}`,
+        likes: `${Math.floor((data.favorites || 0) / 100) / 10}k`
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching trending wallpapers:', error);
+    // Return default trending wallpapers on error
+    return [
+      { 
+        id: 'default-1', 
+        title: 'Mystical Mountain Lake', 
+        description: 'Serene landscape with vibrant colors',
+        imageUrl: '/trending-wallpaper-1.jpg',
+        slug: 'mystical-mountain-lake',
+        trending: '#1',
+        likes: '2.4k'
+      },
+      { 
+        id: 'default-2', 
+        title: 'Minimal Workspace', 
+        description: 'Clean and productive setup',
+        imageUrl: '/trending-wallpaper-2.jpg',
+        slug: 'minimal-workspace',
+        trending: '#2',
+        likes: '1.8k'
+      },
+      { 
+        id: 'default-3', 
+        title: 'Neon City Nights', 
+        description: 'Cyberpunk urban landscape',
+        imageUrl: '/trending-wallpaper-3.jpg',
+        slug: 'neon-city-nights',
+        trending: '#3',
+        likes: '1.5k'
+      },
+      { 
+        id: 'default-4', 
+        title: 'Ocean Sunrise', 
+        description: 'Beautiful morning at the beach',
+        imageUrl: '/trending-wallpaper-4.jpg',
+        slug: 'ocean-sunrise',
+        trending: '#4',
+        likes: '1.2k'
+      }
+    ];
+  }
+}
+
 // Get popular categories
 async function getPopularCategories() {
   const categories = [
@@ -95,9 +252,105 @@ async function getPopularCategories() {
   return categories;
 }
 
+// Get curated collections
+async function getCuratedCollections() {
+  return [
+    { title: "Work From Home", count: "24 wallpapers", image: "/collection-work.jpg", slug: "work-from-home" },
+    { title: "Calm & Mindful", count: "18 wallpapers", image: "/collection-calm.jpg", slug: "calm-mindful" },
+    { title: "Vibrant Colors", count: "32 wallpapers", image: "/collection-vibrant.jpg", slug: "vibrant-colors" }
+  ];
+}
+
 export default async function HomePage() {
   const featuredWallpaper = await getFeaturedWallpaper();
   const popularCategories = await getPopularCategories();
+  const trendingWallpapers = await getTrendingWallpapers();
+  const curatedCollections = await getCuratedCollections();
+  
+  // Common blur placeholder for images
+  const blurDataURL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+";
+  
+  // Helper function to check if an image URL is valid
+  function isValidImageUrl(url: string): boolean {
+    if (!url) return false;
+    
+    // Handle local file paths that start with '/'
+    if (url.startsWith('/')) {
+      return true;
+    }
+    
+    // Handle external URLs
+    try {
+      new URL(url);
+      return url.startsWith('http://') || url.startsWith('https://');
+    } catch {
+      return false;
+    }
+  }
+  
+  // Helper function to sanitize R2 URLs if needed
+  function sanitizeR2Url(url: string): string {
+    if (!url) return url;
+    
+    // Handle the case where URL might be missing protocol for R2
+    if (url.startsWith('pub-') && url.includes('.r2.dev')) {
+      console.log('Adding protocol to R2 URL:', url);
+      return `https://${url}`;
+    }
+    
+    // Ensure R2 URLs use HTTPS
+    if (url.includes('.r2.dev') && url.startsWith('http://')) {
+      return url.replace('http://', 'https://');
+    }
+    
+    return url;
+  }
+  
+  // Helper function to check if URL is from R2
+  function isR2Image(url: string): boolean {
+    if (!url) return false;
+    
+    const r2PublicDomain = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_DOMAIN;
+    return (
+      url.includes('.r2.dev') || 
+      url.includes('.cloudflarestorage.com') ||
+      (typeof r2PublicDomain === 'string' && url.includes(r2PublicDomain))
+    );
+  }
+  
+  // Helper function to get wallpaper image with sanitized URL
+  function getWallpaperImage(wallpaper: TrendingWallpaper, defaultImage: string): string {
+    // If no image URL, use default
+    if (!wallpaper.imageUrl) {
+      return defaultImage;
+    }
+    
+    // For local paths, return directly
+    if (wallpaper.imageUrl.startsWith('/')) {
+      return wallpaper.imageUrl;
+    }
+    
+    // Sanitize the URL if it's an R2 URL
+    const sanitizedUrl = isR2Image(wallpaper.imageUrl) 
+      ? sanitizeR2Url(wallpaper.imageUrl) 
+      : wallpaper.imageUrl;
+    
+    // Log for debugging
+    console.log('Processing wallpaper image:', {
+      original: wallpaper.imageUrl,
+      sanitized: sanitizedUrl,
+      isR2: isR2Image(wallpaper.imageUrl),
+      isValid: isValidImageUrl(sanitizedUrl)
+    });
+    
+    // If image URL is valid, use it
+    if (isValidImageUrl(sanitizedUrl)) {
+      return sanitizedUrl;
+    }
+    
+    // Otherwise, use the default
+    return defaultImage;
+  }
   
   return (
     <div className="w-full bg-gradient-to-b from-background via-background/95 to-background/90">
@@ -174,13 +427,17 @@ export default async function HomePage() {
             {/* Featured Image Side */}
             <div className="relative mt-8 lg:mt-0">
               <div className="relative aspect-[5/4] md:aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 border border-primary/10">
-                <NextImage
+                <ServerImage
                   src={featuredWallpaper.imageUrl}
                   alt={featuredWallpaper.title}
+                  fallbackSrc="/featured-wallpaper.jpg"
                   fill={true}
                   className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  priority
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  priority={true}
+                  quality={85}
+                  placeholder="blur"
+                  blurDataURL={blurDataURL}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                 <div className="absolute bottom-5 left-5 right-5">
@@ -260,7 +517,7 @@ export default async function HomePage() {
         </div>
       </section>
       
-      {/* Trending Section - New */}
+      {/* Trending Section - Updated with Dynamic Content */}
       <section className="w-full py-12 mb-16 bg-muted/30">
         <div className="container px-4 sm:px-6 mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
@@ -281,45 +538,51 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Feature larger trending wallpaper */}
             <div className="md:col-span-2 group relative aspect-[4/3] md:aspect-square rounded-xl overflow-hidden shadow-lg">
-              <NextImage
-                src="/trending-wallpaper-1.jpg"
-                alt="Trending Wallpaper"
+              <ServerImage
+                src={getWallpaperImage(trendingWallpapers[0], '/trending-wallpaper-1.jpg')}
+                alt={trendingWallpapers[0].title}
+                fallbackSrc="/trending-wallpaper-1.jpg"
                 fill={true}
                 className="object-cover transition-transform duration-500 group-hover:scale-110"
-                sizes="(max-width: 768px) 100vw, 50vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                quality={75}
+                loading="lazy"
+                placeholder="blur"
+                blurDataURL={blurDataURL}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80"></div>
               <div className="absolute top-4 left-4 flex items-center gap-2">
-                <span className="px-3 py-1 bg-white/90 text-black text-xs font-medium rounded-full">Trending #1</span>
+                <span className="px-3 py-1 bg-white/90 text-black text-xs font-medium rounded-full">{trendingWallpapers[0].trending}</span>
                 <span className="flex items-center gap-1 px-3 py-1 bg-black/50 text-white text-xs font-medium rounded-full">
-                  <HeartIcon className="h-3 w-3" /> 2.4k
+                  <HeartIcon className="h-3 w-3" /> {trendingWallpapers[0].likes}
                 </span>
               </div>
               <div className="absolute bottom-4 left-4 right-4">
-                <h3 className="text-white font-medium text-lg">Mystical Mountain Lake</h3>
-                <p className="text-white/80 text-sm mt-1">Serene landscape with vibrant colors</p>
+                <h3 className="text-white font-medium text-lg">{trendingWallpapers[0].title}</h3>
+                <p className="text-white/80 text-sm mt-1">{trendingWallpapers[0].description}</p>
               </div>
               <Link 
-                href="/wallpapers/mystical-mountain-lake" 
+                href={`/wallpapers/${trendingWallpapers[0].slug}`} 
                 className="absolute inset-0 z-10"
-                aria-label="View Mystical Mountain Lake wallpaper" 
+                aria-label={`View ${trendingWallpapers[0].title} wallpaper`} 
               />
             </div>
             
             {/* Three smaller trending wallpapers */}
             <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 md:grid-rows-2 gap-4 md:gap-6">
-              {[
-                { title: "Minimal Workspace", desc: "Clean and productive setup", trending: "#2", likes: "1.8k" },
-                { title: "Neon City Nights", desc: "Cyberpunk urban landscape", trending: "#3", likes: "1.5k" },
-                { title: "Ocean Sunrise", desc: "Beautiful morning at the beach", trending: "#4", likes: "1.2k" }
-              ].map((item, i) => (
+              {trendingWallpapers.slice(1, 4).map((item: TrendingWallpaper, i: number) => (
                 <div key={i} className={`group relative ${i === 2 ? 'sm:col-span-2 md:col-span-1' : ''} aspect-video md:aspect-square rounded-xl overflow-hidden shadow-lg`}>
-                  <NextImage
-                    src={`/trending-wallpaper-${i+2}.jpg`}
+                  <ServerImage
+                    src={getWallpaperImage(item, `/trending-wallpaper-${i+2}.jpg`)}
                     alt={item.title}
+                    fallbackSrc={`/trending-wallpaper-${i+2}.jpg`}
                     fill={true}
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    sizes="(max-width: 768px) 50vw, 25vw"
+                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
+                    quality={75}
+                    loading="lazy"
+                    placeholder="blur"
+                    blurDataURL={blurDataURL}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80"></div>
                   <div className="absolute top-3 left-3 flex items-center gap-2">
@@ -330,10 +593,10 @@ export default async function HomePage() {
                   </div>
                   <div className="absolute bottom-3 left-3 right-3">
                     <h3 className="text-white font-medium">{item.title}</h3>
-                    <p className="text-white/80 text-xs mt-1">{item.desc}</p>
+                    <p className="text-white/80 text-xs mt-1">{item.description}</p>
                   </div>
                   <Link 
-                    href={`/wallpapers/${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                    href={`/wallpapers/${item.slug}`}
                     className="absolute inset-0 z-10"
                     aria-label={`View ${item.title} wallpaper`} 
                   />
@@ -344,7 +607,7 @@ export default async function HomePage() {
         </div>
       </section>
       
-      {/* Collections Section - New */}
+      {/* Collections Section - Updated */}
       <section className="w-full py-12 mb-16">
         <div className="container px-4 sm:px-6 mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
@@ -359,19 +622,20 @@ export default async function HomePage() {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: "Work From Home", count: "24 wallpapers", image: "/collection-work.jpg", slug: "work-from-home" },
-              { title: "Calm & Mindful", count: "18 wallpapers", image: "/collection-calm.jpg", slug: "calm-mindful" },
-              { title: "Vibrant Colors", count: "32 wallpapers", image: "/collection-vibrant.jpg", slug: "vibrant-colors" }
-            ].map((collection, i) => (
+            {curatedCollections.map((collection, i) => (
               <Link href={`/collections/${collection.slug}`} key={i}>
                 <div className="group relative aspect-[3/2] rounded-xl overflow-hidden shadow-lg">
-                  <NextImage
+                  <ServerImage
                     src={collection.image}
                     alt={collection.title}
+                    fallbackSrc="/collection-generic.jpg"
                     fill={true}
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    quality={75}
+                    loading="lazy"
+                    placeholder="blur"
+                    blurDataURL={blurDataURL}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80"></div>
                   <div className="absolute bottom-5 left-5 right-5">
@@ -449,11 +713,17 @@ export default async function HomePage() {
               <div className="relative h-60 md:h-72 -mb-8 md:mb-0">
                 <div className="absolute inset-y-0 right-0 w-full md:w-[120%] h-full">
                   <div className="relative h-full w-full">
-                    <NextImage
+                    <ServerImage
                       src="/devices-mockup.png"
                       alt="Our wallpapers on multiple devices"
+                      fallbackSrc="/devices-generic.png"
                       fill
                       className="object-contain object-bottom"
+                      loading="lazy"
+                      quality={75}
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      placeholder="blur"
+                      blurDataURL={blurDataURL}
                     />
                   </div>
                 </div>

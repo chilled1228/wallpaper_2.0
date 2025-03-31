@@ -100,6 +100,29 @@ const navigation: NavigationSection[] = [
         description: 'User management'
       },
       {
+        name: 'Storage',
+        href: '/admin/storage',
+        icon: Database,
+        description: 'Manage storage providers',
+        submenu: [
+          {
+            name: 'Overview',
+            href: '/admin/storage',
+            description: 'Storage dashboard'
+          },
+          {
+            name: 'R2 Storage',
+            href: '/admin/storage/r2',
+            description: 'Cloudflare R2 for wallpapers'
+          },
+          {
+            name: 'R2 Setup',
+            href: '/admin/storage/r2/setup',
+            description: 'Configure Cloudflare R2'
+          }
+        ]
+      },
+      {
         name: 'Settings',
         href: '/admin/settings',
         icon: Settings,
