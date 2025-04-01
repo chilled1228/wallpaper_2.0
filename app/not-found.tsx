@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Page Not Found - FreeWallpapers',
+  title: 'Page Not Found - PersonalAIWalls',
   description: 'The page you are looking for does not exist or has been moved.',
 };
 

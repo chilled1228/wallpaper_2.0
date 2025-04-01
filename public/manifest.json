@@ -1,7 +1,7 @@
 {
-  "name": "FreePromptBase",
-  "short_name": "PromptBase",
-  "description": "Revolutionizing AI prompt creation and management",
+  "name": "GetWallpapersFree",
+  "short_name": "GetWallpapersFree",
+  "description": "Discover and download high-quality AI-generated wallpapers for your devices. For personal use only.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -1,5 +1,7 @@
+'use client'
+
 import Image from 'next/image';
-import { forwardRef } from 'react';
+import { forwardRef, useState, useEffect } from 'react';
 
 // Function to sanitize URLs with minimal operations
 function sanitizeR2Url(url: string): string {
@@ -58,6 +60,7 @@ interface ServerImageProps {
   loading?: 'eager' | 'lazy';
   placeholder?: 'blur' | 'empty';
   blurDataURL?: string;
+  fetchpriority?: 'high' | 'low' | 'auto';
 }
 
 // Default blur data URL for minimal loading flash
@@ -77,53 +80,131 @@ export function ServerImage({
   loading,
   placeholder = 'blur', // Default to blur for smoother loading
   blurDataURL = defaultBlurDataURL,
+  fetchpriority,
 }: ServerImageProps) {
-  // Minimal processing - just enough to fix common issues
-  const sanitizedSrc = sanitizeR2Url(src);
+  // Faster initial URL processing with less operations
+  const sanitizedSrc = typeof src === 'string' ? sanitizeR2Url(src) : '';
   
-  // Only require basic validation
-  const hasValidSrc = sanitizedSrc && (
-    sanitizedSrc.startsWith('/') || sanitizedSrc.startsWith('http')
-  );
+  // Directly sanitize the src to avoid errors during state transitions
+  const initialSrc = sanitizedSrc || fallbackSrc;
+    
+  const [imgSrc, setImgSrc] = useState<string>(initialSrc);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   
-  // Use the fallback if no valid source
-  const finalSrc = hasValidSrc ? sanitizedSrc : fallbackSrc;
+  // Safe URL processing in useEffect to avoid render-time errors
+  useEffect(() => {
+    try {
+      // Skip processing if we're already using the fallback
+      if (hasError) return;
+      
+      // Minimal processing - just enough to fix common issues
+      const sanitizedSrc = sanitizeR2Url(src);
+      
+      // Validate the sanitized URL
+      const hasValidSrc = sanitizedSrc && 
+        (sanitizedSrc.startsWith('/') || sanitizedSrc.startsWith('http'));
+      
+      // Only update if the URL is valid and different from current
+      if (hasValidSrc && sanitizedSrc !== imgSrc) {
+        setImgSrc(sanitizedSrc);
+        setIsLoading(true);
+      } else if (!hasValidSrc && fallbackSrc !== imgSrc) {
+        // Use fallback for invalid URLs
+        setImgSrc(fallbackSrc);
+        setIsLoading(true);
+      }
+    } catch (err) {
+      console.error('Error processing image URL:', err);
+      setHasError(true);
+      setImgSrc(fallbackSrc);
+    }
+  }, [src, fallbackSrc, imgSrc, hasError]);
   
-  // Common image properties - optimized for performance
+  // Handle errors safely
+  const handleError = () => {
+    console.error(`Image failed to load: ${imgSrc}`);
+    setHasError(true);
+    setImgSrc(fallbackSrc);
+    
+    // Attempt to log specific details about the URL that failed
+    try {
+      const urlObj = new URL(imgSrc);
+      console.debug('Failed image details:', {
+        protocol: urlObj.protocol,
+        hostname: urlObj.hostname,
+        pathname: urlObj.pathname,
+        containsR2: imgSrc.includes('.r2.dev'),
+        containsCloudflare: imgSrc.includes('cloudflarestorage')
+      });
+    } catch (e) {
+      console.debug('Could not parse failed URL:', imgSrc);
+    }
+  };
+  
+  // Handle load complete
+  const handleLoad = () => {
+    setIsLoading(false);
+  };
+  
+  // Optimized image properties
   const imageProps = {
     alt,
-    className,
-    priority,
+    className: `${className} ${isLoading ? 'opacity-80' : 'opacity-100'} transition-opacity duration-300`,
+    priority: priority || fill, // Always prioritize fill images that are likely above the fold
     quality,
-    loading: loading || (priority ? 'eager' : 'lazy'),
-    sizes: sizes || '(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw',
+    // Only set loading if priority is not true
+    ...(!(priority || fill) ? { loading: loading || 'lazy' } : {}),
+    sizes: sizes || (fill ? '100vw' : '(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw'),
     decoding: 'async' as const,
     placeholder,
     blurDataURL,
-    style: { color: 'transparent' } // Prevent alt text flash during loading
+    onError: handleError,
+    onLoad: handleLoad,
+    fetchPriority: fetchpriority || (priority || fill ? 'high' : 'auto'),
+    style: { color: 'transparent' }, // Prevent alt text flash during loading
+    // Improved caching strategy
+    unoptimized: src.includes('.svg') || (!src.includes('.r2.') && !src.startsWith('/')), // Skip optimization for SVGs or external URLs
   };
   
-  // Optimized rendering path
-  if (fill) {
+  // Safely rendered image with error boundary pattern
+  try {
+    // Optimized rendering path
+    if (fill) {
+      return (
+        <div className="w-full h-full relative bg-muted/20">
+          <Image
+            {...imageProps}
+            src={imgSrc}
+            fill
+          />
+        </div>
+      );
+    }
+    
     return (
-      <div className="w-full h-full relative bg-muted/20">
+      <div className="relative bg-muted/20">
         <Image
           {...imageProps}
-          src={finalSrc}
-          fill
+          src={imgSrc}
+          width={width || 1200}
+          height={height || 800}
         />
       </div>
     );
+  } catch (err) {
+    console.error('Error rendering image:', err);
+    // Fallback rendering for critical errors
+    return (
+      <div className={`relative bg-muted/40 ${fill ? 'w-full h-full' : ''}`} style={{ 
+        width: fill ? '100%' : (width || 'auto'), 
+        height: fill ? '100%' : (height || 'auto'),
+        minHeight: '100px'
+      }}>
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-xs">
+          Image unavailable
+        </div>
+      </div>
+    );
   }
-  
-  return (
-    <div className="relative bg-muted/20">
-      <Image
-        {...imageProps}
-        src={finalSrc}
-        width={width || 1200}
-        height={height || 800}
-      />
-    </div>
-  );
 } 

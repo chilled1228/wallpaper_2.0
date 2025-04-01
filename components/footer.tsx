@@ -23,16 +23,16 @@ export function Footer() {
                 <ImageIcon className="h-6 w-6 text-primary" />
               </div>
               <span className="font-heading text-xl font-bold">
-                FreeWallpapers
+                GetWallpapersFree
               </span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-              Discover and download beautiful high-quality wallpapers for your desktop, 
-              laptop, tablet, or mobile device. Free for personal use.
+              Discover and download beautiful high-quality AI-generated wallpapers for your desktop, 
+              laptop, tablet, or mobile device. For personal use only.
             </p>
             <div className="flex items-center gap-4">
               <a
-                href="https://twitter.com/freewallpapers"
+                href="https://twitter.com/getwallpapersfree"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Follow us on Twitter"
@@ -41,7 +41,7 @@ export function Footer() {
                 <Twitter className="h-4 w-4" />
               </a>
               <a
-                href="https://instagram.com/freewallpapers"
+                href="https://instagram.com/getwallpapersfree"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Follow us on Instagram"
@@ -50,7 +50,7 @@ export function Footer() {
                 <Instagram className="h-4 w-4" />
               </a>
               <a
-                href="https://facebook.com/freewallpapers"
+                href="https://facebook.com/getwallpapersfree"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Follow us on Facebook"
@@ -102,6 +102,15 @@ export function Footer() {
                     <ArrowUpRight className="h-3 w-3 ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                   </Link>
                 </li>
+                <li>
+                  <Link 
+                    href="/about" 
+                    className="group flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    About Us
+                    <ArrowUpRight className="h-3 w-3 ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
+                  </Link>
+                </li>
               </ul>
             </nav>
           </div>
@@ -140,6 +149,15 @@ export function Footer() {
                 </li>
                 <li>
                   <Link 
+                    href="/dmca" 
+                    className="group flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    DMCA Policy
+                    <ArrowUpRight className="h-3 w-3 ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
+                  </Link>
+                </li>
+                <li>
+                  <Link 
                     href="/contact" 
                     className="group flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
@@ -165,10 +183,10 @@ export function Footer() {
         <div className="mt-10 pt-6 border-t border-border">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs text-muted-foreground order-2 md:order-1">
-              © {currentYear} FreeWallpapers. All rights reserved.
+              © {currentYear} GetWallpapersFree. All rights reserved. For personal use only.
             </p>
             <div className="flex items-center gap-6 order-1 md:order-2 text-xs text-muted-foreground">
-              <span>Made with ❤️ for wallpaper enthusiasts</span>
+              <span>Free wallpapers for everyone</span>
             </div>
           </div>
         </div>

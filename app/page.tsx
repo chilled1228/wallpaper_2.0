@@ -473,28 +473,9 @@ export default async function HomePage() {
           
           <div className="relative min-h-[800px]">
             <Suspense fallback={
-              <div className="flex flex-col min-h-[800px] w-full">
-                <div className="w-full max-w-3xl mx-auto mb-6 sm:mb-8 lg:mb-12">
-                  <div className="bg-background/40 backdrop-blur-xl rounded-xl border border-primary/10 shadow-sm p-4 md:p-6 min-h-[160px]">
-                    <div className="relative mb-5">
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 bg-muted-foreground/20 rounded-full" />
-                      <div className="h-10 sm:h-12 w-full bg-background/60 border border-primary/10 rounded-lg" />
-                    </div>
-                    <div className="flex justify-between items-center mt-4 mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 bg-primary/20 rounded-full" />
-                        <div className="h-4 w-32 bg-muted/30 rounded" />
-                      </div>
-                      <div className="h-4 w-24 bg-muted/30 rounded" />
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-3 min-h-[36px]">
-                      <div className="h-8 w-16 bg-primary/10 rounded-lg" />
-                      <div className="h-8 w-24 bg-muted/30 rounded-lg" />
-                      <div className="h-8 w-20 bg-muted/30 rounded-lg" />
-                      <div className="h-8 w-28 bg-muted/30 rounded-lg" />
-                    </div>
-                  </div>
-                </div>
+              <div className="min-h-[800px] animate-in fade-in-0">
+                <div className="h-16 w-60 rounded-xl bg-muted/30 mb-6"></div>
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                   {Array.from({ length: 12 }).map((_, i) => (
                     <div key={i} className="bg-background/60 backdrop-blur-xl border border-primary/10 shadow-sm rounded-xl overflow-hidden h-full">
@@ -515,61 +496,6 @@ export default async function HomePage() {
                 <WallpaperGrid />
               </div>
             </Suspense>
-          </div>
-          
-          <div className="flex justify-center mt-10">
-            <Button asChild size="lg" className="rounded-full">
-              <Link href="/latest">
-                View More Wallpapers <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-      
-      {/* Curated Collections - Optimized for performance */}
-      <section className="w-full py-12 sm:py-16 bg-muted/30">
-        <div className="container px-4 sm:px-6 mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 sm:mb-10">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <SparklesIcon className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium text-primary">Hand-picked</span>
-              </div>
-              <h2 className="text-3xl font-bold">Curated Collections</h2>
-              <p className="text-muted-foreground mt-2">Themed wallpaper sets for every mood and style</p>
-            </div>
-            <Button variant="outline" asChild className="group rounded-full">
-              <Link href="/collections">
-                View All Collections <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {curatedCollections.map((collection, i) => (
-              <Link href={`/collections/${collection.slug}`} key={i}>
-                <div className="group relative aspect-[3/2] rounded-xl overflow-hidden shadow-lg">
-                  <ServerImage
-                    src={collection.image}
-                    alt={collection.title}
-                    fallbackSrc="/collection-generic.jpg"
-                    fill={true}
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    quality={75}
-                    loading="lazy"
-                    placeholder="blur"
-                    blurDataURL={blurDataURL}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-80"></div>
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <h3 className="text-white font-medium text-lg">{collection.title}</h3>
-                    <p className="text-white/80 text-sm mt-1">{collection.count} wallpapers</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
           </div>
         </div>
       </section>

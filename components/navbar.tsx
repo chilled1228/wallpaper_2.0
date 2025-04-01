@@ -37,7 +37,7 @@ export function Navbar() {
                 <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
               </div>
               <span key="navbar-logo" className="font-heading text-lg sm:text-xl font-bold">
-                FreeWallpapers
+                GetWallpapersFree
               </span>
             </Link>
           </div>
@@ -73,6 +73,12 @@ export function Navbar() {
               className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Blog
+            </Link>
+            <Link 
+              href="/about"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              About
             </Link>
           </div>
 
@@ -131,6 +137,13 @@ export function Navbar() {
                     onClick={closeSheet}
                   >
                     Blog
+                  </Link>
+                  <Link 
+                    href="/about"
+                    className="text-base sm:text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={closeSheet}
+                  >
+                    About
                   </Link>
                   <div className="pt-4 flex flex-col gap-3">
                     {user && <CreditsDisplay />}

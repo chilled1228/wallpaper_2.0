@@ -1,4 +1,4 @@
-# Wallpaper 2.0
+# GetWallpapersFree
 
 ## Recent Updates
 

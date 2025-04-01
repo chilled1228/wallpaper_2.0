@@ -56,6 +56,10 @@
 
   .responsive-grid {
     @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6;
+    will-change: transform;
+    contain: layout style paint;
+    content-visibility: auto;
+    contain-intrinsic-size: 0 300px;
   }
   
   .responsive-flex {
@@ -110,28 +114,7 @@
   }
 
   .text-mobile-friendly {
-    @apply text-sm sm:text-base leading-relaxed tracking-tight break-words;
-  }
-
-  .shimmer {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .shimmer::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 200%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.08) 50%,
-      transparent 100%
-    );
-    animation: shimmer 1.5s infinite linear;
+    @apply text-sm leading-relaxed sm:text-base;
   }
   
   /* Touch-friendly interactive elements */
@@ -311,11 +294,9 @@
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(5px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -335,21 +316,13 @@
 /* Lighter-weight animation for better performance during scrolling */
 @keyframes fadeInLight {
   from {
-    opacity: 0.8;
+    opacity: 0;
   }
   to {
-    opacity: 1;
+    opacity: 0.7;
   }
 }
 
-@keyframes shimmer {
-  0% {
-    left: -100%;
-  }
-  100% {
-    left: 100%;
-  }
-}
 
 /* Table of Contents Styles */
 #toc-toggle {

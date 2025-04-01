@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { ArrowRight, Scale, Shield, FileCheck, AlertCircle, Users, RefreshCw, Mail, Gavel, Handshake } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Terms & Conditions - FreeWallpapers',
-  description: 'Read about our terms and conditions for using the FreeWallpapers platform',
+  title: 'Terms & Conditions - PersonalAIWalls',
+  description: 'Read about our terms and conditions for using the PersonalAIWalls platform',
 };
 
 export default function TermsAndConditions() {
@@ -40,7 +40,7 @@ export default function TermsAndConditions() {
         {/* Introduction Section */}
         <div className="max-w-3xl mx-auto mb-16 text-center">
           <p className="text-lg text-muted-foreground/90 leading-relaxed mb-6">
-            Welcome to FreeWallpapers. By accessing or using our services, you agree to be bound by these Terms & Conditions. Please read them carefully before using our platform.
+            Welcome to PersonalAIWalls. By accessing or using our services, you agree to be bound by these Terms & Conditions. Please read them carefully before using our platform.
           </p>
           <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground/80">
             <span className="flex items-center gap-1.5">
@@ -74,7 +74,7 @@ export default function TermsAndConditions() {
                 </h2>
                 <div className="prose prose-gray dark:prose-invert">
                   <p className="text-muted-foreground/90">
-                    By accessing or using FreeWallpapers, you agree to:
+                    By accessing or using PersonalAIWalls, you agree to:
                   </p>
                   <ul className="mt-4 space-y-3 text-muted-foreground/90">
                     <li className="flex items-center gap-2">
@@ -111,7 +111,7 @@ export default function TermsAndConditions() {
                 </h2>
                 <div className="prose prose-gray dark:prose-invert">
                   <p className="text-muted-foreground/90">
-                    As a user of FreeWallpapers, you are responsible for:
+                    As a user of PersonalAIWalls, you are responsible for:
                   </p>
                   <ul className="mt-4 space-y-3 text-muted-foreground/90">
                     <li className="flex items-center gap-2">
@@ -190,11 +190,11 @@ export default function TermsAndConditions() {
                   </p>
                   <div className="mt-6 flex flex-col sm:flex-row gap-4">
                     <Link 
-                      href="mailto:support@freewallpapers.com" 
+                      href="mailto:support@personalwallpapers.io" 
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 transition-colors duration-200"
                     >
                       <Mail className="w-4 h-4" />
-                      <span>support@freewallpapers.com</span>
+                      <span>support@personalwallpapers.io</span>
                     </Link>
                     <Link 
                       href="/contact" 

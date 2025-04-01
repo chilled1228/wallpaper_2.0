@@ -3,8 +3,8 @@ import { MessageSquare } from 'lucide-react';
 import ContactFormWrapper from './contact-form-wrapper';
 
 export const metadata: Metadata = {
-  title: 'Contact Us - FreeWallpapers',
-  description: 'Have questions, suggestions or feedback about FreeWallpapers? Reach out to our team.',
+  title: 'Contact Us - PersonalAIWalls',
+  description: 'Have questions, suggestions or feedback about PersonalAIWalls? Reach out to our team.',
 };
 
 export default function ContactPage() {
@@ -39,10 +39,10 @@ export default function ContactPage() {
             <p className="text-muted-foreground">
               Prefer email? Reach us directly at{' '}
               <a
-                href="mailto:support@freewallpapers.com"
+                href="mailto:support@personalwallpapers.io"
                 className="text-foreground hover:underline"
               >
-                support@freewallpapers.com
+                support@personalwallpapers.io
               </a>
             </p>
           </div>

@@ -3,8 +3,8 @@ import { ArrowRight, AlertTriangle, Scale, BookOpen, FileWarning, Shield, Extern
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Disclaimer - FreeWallpapers',
-  description: 'Read our disclaimer to understand the terms of using our FreeWallpapers platform',
+  title: 'Disclaimer - PersonalAIWalls',
+  description: 'Read our disclaimer to understand the terms of using our PersonalAIWalls platform',
 };
 
 export default function Disclaimer() {
@@ -40,7 +40,7 @@ export default function Disclaimer() {
         {/* Introduction Section */}
         <div className="max-w-3xl mx-auto mb-16 text-center">
           <p className="text-lg text-muted-foreground/90 leading-relaxed mb-6">
-            Please read this disclaimer carefully before using FreeWallpapers. By accessing and using our platform, you acknowledge and agree to the terms outlined in this disclaimer.
+            Please read this disclaimer carefully before using PersonalAIWalls. By accessing and using our platform, you acknowledge and agree to the terms outlined in this disclaimer.
           </p>
           <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground/80">
             <span className="flex items-center gap-1.5">
@@ -74,7 +74,7 @@ export default function Disclaimer() {
                 </h2>
                 <div className="prose prose-gray dark:prose-invert">
                   <p className="text-muted-foreground/90">
-                    The information provided on FreeWallpapers is for general informational and educational purposes only. We make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability of the information, products, services, or related graphics contained on the platform.
+                    The information provided on PersonalAIWalls is for general informational and educational purposes only. We make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability of the information, products, services, or related graphics contained on the platform.
                   </p>
                 </div>
               </div>
@@ -93,7 +93,7 @@ export default function Disclaimer() {
                 </h2>
                 <div className="prose prose-gray dark:prose-invert">
                   <p className="text-muted-foreground/90">
-                    By using FreeWallpapers, you acknowledge and agree that:
+                    By using PersonalAIWalls, you acknowledge and agree that:
                   </p>
                   <ul className="mt-4 space-y-3 text-muted-foreground/90">
                     <li className="flex items-center gap-2">
@@ -205,11 +205,11 @@ export default function Disclaimer() {
                   </p>
                   <div className="mt-6 flex flex-col sm:flex-row gap-4">
                     <Link 
-                      href="mailto:support@freewallpapers.com"
+                      href="mailto:support@personalwallpapers.io"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 transition-colors duration-200"
                     >
                       <ExternalLink className="w-4 h-4" />
-                      <span>support@freewallpapers.com</span>
+                      <span>support@personalwallpapers.io</span>
                     </Link>
                     <Link
                       href="/contact"

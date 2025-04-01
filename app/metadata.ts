@@ -1,29 +1,29 @@
 import { Metadata } from 'next'
 
 export const defaultMetadata: Metadata = {
-  title: 'Free Wallpapers - High Quality Wallpapers for Your Devices',
-  description: 'Discover and use high-quality wallpapers for your devices. Free collection of wallpapers for various screen sizes and use cases.',
-  keywords: ['wallpapers', 'free wallpapers', 'HD wallpapers', 'device wallpapers', 'wallpaper collection'],
+  title: 'GetWallpapersFree - High Quality Wallpapers for Personal Use',
+  description: 'Discover and use high-quality wallpapers for your devices. Free collection of AI-generated wallpapers for personal use only.',
+  keywords: ['wallpapers', 'free wallpapers', 'HD wallpapers', 'AI wallpapers', 'device wallpapers', 'wallpaper collection'],
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://freewallpapers.com',
-    siteName: 'Free Wallpapers',
-    title: 'Free Wallpapers - High Quality Wallpapers for Your Devices',
-    description: 'Discover and use high-quality wallpapers for your devices. Free collection of wallpapers for various screen sizes and use cases.',
+    url: 'https://getwallpapersfree.com',
+    siteName: 'GetWallpapersFree',
+    title: 'GetWallpapersFree - High Quality Wallpapers for Personal Use',
+    description: 'Discover and use high-quality wallpapers for your devices. Free collection of AI-generated wallpapers for personal use only.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Free Wallpapers',
+        alt: 'Personal AI Wallpapers',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free Wallpapers - High Quality Wallpapers for Your Devices',
-    description: 'Discover and use high-quality wallpapers for your devices. Free collection of wallpapers for various screen sizes and use cases.',
+    title: 'GetWallpapersFree - High Quality Wallpapers for Personal Use',
+    description: 'Discover and use high-quality wallpapers for your devices. Free collection of AI-generated wallpapers for personal use only.',
     images: ['/og-image.png'],
   },
   robots: {

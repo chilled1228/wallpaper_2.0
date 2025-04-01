@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase'
 import { collection, query, getDocs, orderBy, limit, where, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Search, Download, Heart, Filter, Loader2 } from 'lucide-react'
+import { Search, Download, Heart, Filter, Loader2, ChevronRight, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -33,23 +33,6 @@ interface Wallpaper {
   version?: number
   tags?: string[]
   r2ImageUrl?: string
-}
-
-function WallpaperCardSkeleton() {
-  return (
-    <Card className="overflow-hidden bg-background/60 backdrop-blur-xl border-primary/10 shadow-sm rounded-xl h-full">
-      <div className="aspect-[3/4] relative bg-gradient-to-br from-background/80 to-muted/50 overflow-hidden">
-        <div className="absolute inset-0 bg-muted/50" />
-      </div>
-      <div className="p-3 sm:p-4 space-y-3">
-        <div className="w-24 h-5 rounded-full bg-muted/50" />
-        <div className="space-y-2">
-          <div className="h-4 w-3/4 bg-muted/50 rounded" />
-          <div className="h-4 w-full bg-muted/50 rounded" />
-        </div>
-      </div>
-    </Card>
-  )
 }
 
 // Shared blur data URL for low-quality placeholder
@@ -202,7 +185,6 @@ export function WallpaperGrid() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery] = useDebounce(searchQuery, 300)
   const [wallpapers, setWallpapers] = useState<Wallpaper[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [categories, setCategories] = useState<string[]>([])
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
@@ -266,11 +248,14 @@ export function WallpaperGrid() {
     }
   }, [indexError])
   
-  // Fetch initial wallpapers from Firestore
   useEffect(() => {
     async function fetchWallpapers() {
       try {
-        setIsLoading(true)
+        // Start with a clean state for a new query
+        setWallpapers([])
+        setLastDoc(null)
+        setHasMore(true)
+        
         console.log('Fetching initial wallpapers')
         const wallpapersRef = collection(db, 'wallpapers')
         
@@ -290,7 +275,6 @@ export function WallpaperGrid() {
         
         if (querySnapshot.empty) {
           setHasMore(false)
-          setIsLoading(false)
           return
         }
         
@@ -332,14 +316,13 @@ export function WallpaperGrid() {
         setCategories(Array.from(categoriesSet))
         setHasMore(querySnapshot.size >= WALLPAPERS_PER_PAGE)
       } catch (error) {
-        console.error('Error fetching wallpapers:', error)
-      } finally {
-        setIsLoading(false)
+        console.error("Error fetching wallpapers:", error)
+        setIndexError(error instanceof Error ? error.message : "Unknown error")
       }
     }
     
     fetchWallpapers()
-  }, [processWallpaperData, totalCount])
+  }, [debouncedQuery, activeCategory, processWallpaperData])
   
   // Update counts when new wallpapers are loaded
   useEffect(() => {
@@ -355,8 +338,8 @@ export function WallpaperGrid() {
     try {
       setIsLoadingMore(true)
       
-      // Add small delay to prevent UI jank during scroll
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // Remove artificial delay that can cause lag
+      // await new Promise(resolve => setTimeout(resolve, 100))
       
       const wallpapersRef = collection(db, 'wallpapers')
       
@@ -394,70 +377,23 @@ export function WallpaperGrid() {
       const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
       setLastDoc(lastVisible)
       
-      // Pre-calculate layout space before updating state to prevent layout shift
-      const layoutHeight = document.documentElement.scrollHeight
-      
-      // Update wallpapers array with the minimum UI disruption
-      requestAnimationFrame(() => {
-        // Use functional update to prevent stale state
-        setWallpapers(prevWallpapers => [...prevWallpapers, ...newWallpapers])
+      // Use window.requestAnimationFrame for smoother DOM updates
+      window.requestAnimationFrame(() => {
+        // Use functional update to prevent stale state and minimize rerenders
+        setWallpapers(prevWallpapers => {
+          // Update total count based on what we now know
+          setTotalCount(prevCount => Math.max(prevCount, prevWallpapers.length + newWallpapers.length))
+          return [...prevWallpapers, ...newWallpapers];
+        })
         setCategories(Array.from(categoriesSet))
         setHasMore(querySnapshot.size >= WALLPAPERS_PER_PAGE)
-      })
-      
-      // Update total count based on what we now know
-      setTotalCount(prevCount => Math.max(prevCount, wallpapers.length + newWallpapers.length))
-    } catch (error) {
-      console.error('Error loading more wallpapers:', error)
-    } finally {
-      // Small delay before removing loading state
-      setTimeout(() => {
         setIsLoadingMore(false)
-      }, 200)
+      })
+    } catch (error) {
+      console.error("Error loading more wallpapers:", error)
+      setIsLoadingMore(false)
     }
-  }, [lastDoc, hasMore, isLoadingMore, categories, processWallpaperData, wallpapers.length])
-  
-  // Set up intersection observer for infinite scrolling with debounce
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout | null = null
-    let isObserving = false
-    
-    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
-      if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
-        // Prevent duplicate calls with flag
-        if (isObserving) return
-        isObserving = true
-        
-        // Clear existing timeout
-        if (timeoutId) clearTimeout(timeoutId)
-        
-        // Set a new timeout
-        timeoutId = setTimeout(() => {
-          loadMoreWallpapers()
-          isObserving = false
-        }, 100)
-      }
-    }
-    
-    const options = {
-      rootMargin: '400px', // Load even earlier to prevent seeing the loader
-      threshold: 0.1
-    }
-    
-    const observer = new IntersectionObserver(handleIntersection, options)
-    
-    const currentObserver = observerTarget.current
-    if (currentObserver) {
-      observer.observe(currentObserver)
-    }
-    
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      if (currentObserver) {
-        observer.unobserve(currentObserver)
-      }
-    }
-  }, [loadMoreWallpapers, hasMore, isLoading, isLoadingMore])
+  }, [lastDoc, hasMore, isLoadingMore, categories, processWallpaperData])
   
   // Handle image errors
   const handleImageError = (wallpaperId: string) => {
@@ -535,7 +471,7 @@ export function WallpaperGrid() {
             
             {/* Wallpaper count display */}
             <div className="text-xs text-muted-foreground">
-              {!isLoading && (
+              {!isLoadingMore && (
                 activeCategory 
                   ? `${filteredWallpapers.length} wallpapers in "${activeCategory}"`
                   : debouncedQuery
@@ -578,15 +514,9 @@ export function WallpaperGrid() {
 
       {/* Wallpapers Grid - Set minimum height to prevent layout shifts */}
       <div className="w-full min-h-[800px]">
-        {/* Reserve grid space before content loads to prevent jumping */}
-        <div className="responsive-grid" style={{ minHeight: isLoading ? '800px' : undefined }}>
-          {isLoading ? (
-            <>
-              {Array.from({ length: 12 }).map((_, index) => (
-                <WallpaperCardSkeleton key={index} />
-              ))}
-            </>
-          ) : filteredWallpapers.length > 0 ? (
+        {/* Responsive grid */}
+        <div className="responsive-grid">
+          {filteredWallpapers.length > 0 ? (
             <>
               {filteredWallpapers.map((wallpaper, index) => {
                 // Final sanitized URL check
@@ -594,9 +524,16 @@ export function WallpaperGrid() {
                 
                 return (
                   <Link
-                    key={wallpaper.slug || wallpaper.id}
+                    key={`${wallpaper.slug || wallpaper.id}-${index}`}
                     href={`/wallpapers/${wallpaper.slug || wallpaper.id}`}
                     className="group h-full"
+                    // Apply GPU acceleration to card for smoother hover/interactions
+                    style={{ 
+                      transform: 'translateZ(0)',
+                      willChange: 'transform',
+                      opacity: 1,
+                      animation: `fadeIn ${Math.min(0.3 + index * 0.05, 0.8)}s ease-out` 
+                    }}
                   >
                     <Card 
                       className="overflow-hidden bg-background/60 backdrop-blur-xl border-primary/10 rounded-xl h-full flex flex-col"
@@ -610,11 +547,12 @@ export function WallpaperGrid() {
                           fill={true}
                           className="object-cover group-hover:scale-105 transition-transform duration-700"
                           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                          priority={index < 4}
-                          quality={70}
+                          priority={index < 2} // Only highest priority for the first 2 images
+                          quality={index < 8 ? 70 : 60} // Lower quality for later images
                           placeholder="blur"
                           blurDataURL={blurDataURL}
-                          loading={index > 8 ? "lazy" : undefined}
+                          loading={index < 8 ? "eager" : "lazy"} // Load first 8 eagerly
+                          fetchpriority={index < 4 ? "high" : "auto"} // Set fetch priority for first 4
                         />
                         <div className="absolute top-3 right-3 z-20">
                           <Badge variant="secondary" className="bg-primary/80 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs shadow-sm">
@@ -654,23 +592,49 @@ export function WallpaperGrid() {
                 );
               })}
               
-              {/* Fixed-height loading container to prevent layout shifts */}
-              <div 
-                ref={observerTarget} 
-                className="col-span-full flex justify-center items-center h-16"
-                style={{ minHeight: '60px', margin: '20px 0' }}
-              >
-                {isLoadingMore ? (
-                  <div className="flex items-center justify-center h-16 px-4 py-2 bg-background/50 backdrop-blur-sm rounded-lg shadow-sm border border-primary/5">
-                    <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
-                    <span className="text-sm text-muted-foreground">Loading more...</span>
+              {/* Replace the intersection observer div with a Load More button */}
+              {hasMore && (
+                <div className="col-span-full flex justify-center items-center h-16 mt-6 mb-8">
+                  <div className="flex space-x-4">
+                    <Button 
+                      variant="default"
+                      size="lg"
+                      className="rounded-full shadow-sm px-6"
+                      onClick={loadMoreWallpapers}
+                      disabled={isLoadingMore}
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          Load More <ChevronRight className="ml-1 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      size="lg"
+                      className="rounded-full shadow-sm"
+                      asChild
+                    >
+                      <Link href="/latest">
+                        View All <ArrowRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
                   </div>
-                ) : !hasMore && wallpapers.length > 0 ? (
+                </div>
+              )}
+              
+              {!hasMore && wallpapers.length > 0 && (
+                <div className="col-span-full flex justify-center items-center h-16 mt-6 mb-8">
                   <div className="text-sm text-muted-foreground bg-background/50 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm border border-primary/5">
                     You've reached the end of the collection
                   </div>
-                ) : null}
-              </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="col-span-full flex flex-col items-center justify-center p-8 text-center min-h-[400px]">

@@ -1,5 +1,5 @@
 {
-  "name": "freepromptbase",
+  "name": "getwallpapersfree",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -14,7 +14,8 @@
     "migrate:to-r2": "node scripts/migrate-to-r2.js",
     "r2:setup": "echo 'Follow the instructions in docs/cloudflare-r2-setup.md to set up Cloudflare R2'",
     "ensure:fallbacks": "node utils/ensure-fallback-images.js",
-    "postinstall": "npm run ensure:fallbacks"
+    "postinstall": "npm run ensure:fallbacks",
+    "sync:pinterest": "npx tsx scripts/sync-pinterest.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.7.4",
@@ -76,11 +77,13 @@
     "react-firebase-hooks": "^5.1.1",
     "react-icons": "^5.4.0",
     "react-window": "^1.8.11",
+    "rss-parser": "^3.13.0",
     "shadcn-ui": "^0.9.4",
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "use-debounce": "^10.0.4"
+    "use-debounce": "^10.0.4",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@shadcn/ui": "^0.0.4",

@@ -22,7 +22,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="max-w-md w-full p-8 space-y-4 bg-background/60 backdrop-blur-xl rounded-xl border border-primary/10 shadow-sm">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">Welcome to FreeWallpapers</h1>
+          <h1 className="text-2xl font-bold">Welcome to PersonalAIWalls</h1>
           <p className="text-muted-foreground">
             Sign in to save and upload your favorite wallpapers
           </p>

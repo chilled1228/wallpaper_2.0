@@ -13,7 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   });
   
   // Base URL from environment variable or default
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://freewallpapers.com'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwallpapersfree.com'
 
   // Static routes
   const routes: MetadataRoute.Sitemap = [

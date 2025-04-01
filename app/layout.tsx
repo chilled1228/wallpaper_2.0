@@ -6,6 +6,7 @@ import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
 import { PrivacyConsent } from '@/components/privacy-consent'
 import { SchemaMarkup, generateOrganizationSchema, generateWebsiteSchema } from '@/components/schema-markup'
+import Script from 'next/script'
 
 const inter = Inter({ 
   subsets: ['latin'], 
@@ -19,12 +20,12 @@ const outfit = Outfit({
   display: 'swap',
 })
 
-const websiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://freewallpapers.io'
+const websiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://getwallpapersfree.com'
 
 export const defaultMetadata = {
-  title: 'Free Wallpapers | High-Quality Wallpapers for Desktop, Mobile & Tablets',
-  description: 'Discover and download high-quality wallpapers for your desktop, laptop, tablet, or mobile device. Free for personal use.',
-  creator: 'FreeWallpapers Team',
+  title: 'GetWallpapersFree | High-Quality Wallpapers for Personal Use Only',
+  description: 'Discover and download high-quality AI-generated wallpapers for your desktop, laptop, tablet, or mobile device. For personal use only.',
+  creator: 'GetWallpapersFree',
 };
 
 export const metadata: Metadata = {
@@ -35,13 +36,13 @@ export const metadata: Metadata = {
     description: defaultMetadata.description,
     type: 'website',
     url: websiteUrl,
-    siteName: 'Free Wallpapers',
+    siteName: 'GetWallpapersFree',
     images: [
       {
         url: `${websiteUrl}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: 'Free Wallpapers',
+        alt: 'Personal AI Wallpapers',
       },
     ],
   },
@@ -49,7 +50,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: defaultMetadata.title,
     description: defaultMetadata.description,
-    creator: '@freewallpapers',
+    creator: '@getwallpapersfree',
     images: [`${websiteUrl}/twitter-image.jpg`],
   },
   viewport: 'width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5',
@@ -62,26 +63,37 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className="scroll-smooth">
+      <head>
+        {/* Google AdSense code will go here after approval */}
+        {process.env.NEXT_PUBLIC_ADSENSE_ID && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+          />
+        )}
+      </head>
       <body suppressHydrationWarning className={`${inter.variable} ${outfit.variable} font-sans antialiased min-h-screen bg-background text-foreground`}>
         <Providers>
           {/* Schema.org markup for better SEO */}
           <SchemaMarkup
             type="Organization"
             data={generateOrganizationSchema({
-              name: 'Free Wallpapers',
+              name: 'GetWallpapersFree',
               url: websiteUrl,
               logo: `${websiteUrl}/logo.png`,
-              description: 'Discover and use high-quality wallpapers for your devices. Free collection of wallpapers for various screen sizes and use cases.',
+              description: 'Discover and use high-quality AI-generated wallpapers for your devices. Free collection of wallpapers for personal use only.',
               sameAs: [
-                'https://twitter.com/freewallpapers',
-                'https://instagram.com/freewallpapers'
+                'https://twitter.com/getwallpapersfree',
+                'https://instagram.com/getwallpapersfree'
               ]
             })}
           />
           <SchemaMarkup
             type="WebSite"
             data={generateWebsiteSchema({
-              name: 'Free Wallpapers',
+              name: 'GetWallpapersFree',
               url: websiteUrl,
               description: defaultMetadata.description as string,
               potentialAction: [{
